@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Map — LoraMap{% endblock %}
+{% block body_class %}map-page{% endblock %}
+
+{% block content %}
+<div class="map-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-section">
+            <h3 class="sidebar-title">View Mode</h3>
+            <div class="radio-group">
+                <label class="radio-label">
+                    <input type="radio" name="mode" value="all" checked onchange="setMode('all')">
+                    Full trajectory
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="mode" value="last" onchange="setMode('last')">
+                    Last position only
+                </label>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <h3 class="sidebar-title">Devices</h3>
+            <div id="device-list">
+                <p class="muted">Loading…</p>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <h3 class="sidebar-title">Time Filter</h3>
+            <div class="form-group">
+                <label>From</label>
+                <input type="datetime-local" id="from-time" class="input-sm">
+            </div>
+            <div class="form-group">
+                <label>To</label>
+                <input type="datetime-local" id="to-time" class="input-sm">
+            </div>
+            <button class="btn btn-secondary btn-full" onclick="applyFilters()">Apply Filter</button>
+            <button class="btn btn-ghost btn-full" onclick="clearFilters()">Clear</button>
+        </div>
+
+        <div class="sidebar-section">
+            <button id="fetch-btn" class="btn btn-primary btn-full" onclick="fetchNewData()">
+                ↻ Fetch New Data
+            </button>
+            <p id="fetch-status" class="status-text"></p>
+        </div>
+    </aside>
+
+    <!-- Map -->
+    <div id="map">
+        {% if not google_maps_key %}
+        <div class="map-warning">
+            ⚠️ Google Maps API key not configured. Set <code>GOOGLE_MAPS_API_KEY</code> in your <code>.env</code> file.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Detail panel -->
+    <div id="detail-panel" class="detail-panel" style="display:none;">
+        <div id="detail-content"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+{% if google_maps_key %}
+<script async
+    src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_key }}&callback=initMap&v=weekly">
+</script>
+{% endif %}
+{% endblock %}

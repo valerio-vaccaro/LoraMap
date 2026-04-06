@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% block title %}Data Sources — LoraMap{% endblock %}
+{% block body_class %}content-page{% endblock %}
+
+{% block content %}
+<div class="content-container">
+    <h2 class="page-title">Data Sources</h2>
+
+    <!-- Add form -->
+    <section class="card">
+        <h3 class="card-title">Add Data Source</h3>
+        <form method="POST" action="{{ url_for('datasources') }}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" name="name" required placeholder="My TTN App">
+                </div>
+                <div class="form-group">
+                    <label for="time_window">Time Window</label>
+                    <input type="text" id="time_window" name="time_window" value="12h"
+                           placeholder="12h, 24h, 7d…">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="api_url">API URL</label>
+                <input type="url" id="api_url" name="api_url" required
+                       placeholder="https://eu1.cloud.thethings.network/api/v3/as/applications/…/packages/storage/uplink_message">
+            </div>
+            <div class="form-group">
+                <label for="bearer_token">Bearer Token</label>
+                <input type="text" id="bearer_token" name="bearer_token" required
+                       placeholder="NNSXS.…">
+            </div>
+            <div class="form-group">
+                <label for="decoder_type">Device / Decoder</label>
+                <select id="decoder_type" name="decoder_type">
+                    {% for key, label in decoder_choices %}
+                    <option value="{{ key }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Source</button>
+        </form>
+    </section>
+
+    <!-- Sources table -->
+    {% if sources %}
+    <section class="card">
+        <h3 class="card-title">Configured Sources</h3>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Name</th>
+                        <th>API URL</th>
+                        <th>Decoder</th>
+                        <th>Time Window</th>
+                        <th>Added</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ds in sources %}
+                    <tr class="{% if not ds.enabled %}row-disabled{% endif %}">
+                        <td>
+                            <span class="status-dot {% if ds.enabled %}dot-on{% else %}dot-off{% endif %}"></span>
+                            <span class="status-label">{{ 'Enabled' if ds.enabled else 'Disabled' }}</span>
+                        </td>
+                        <td><strong>{{ ds.name }}</strong></td>
+                        <td class="url-cell" title="{{ ds.api_url }}">{{ ds.api_url[:60] }}{% if ds.api_url|length > 60 %}…{% endif %}</td>
+                        <td>{{ ds.decoder_type }}</td>
+                        <td>{{ ds.time_window }}</td>
+                        <td>{{ ds.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td class="action-cell">
+                            {% if ds.enabled %}
+                            <form method="POST" action="{{ url_for('fetch_datasource', ds_id=ds.id) }}" style="display:inline">
+                                <button type="submit" class="btn btn-secondary btn-sm">↻ Fetch</button>
+                            </form>
+                            {% endif %}
+
+                            <button class="btn btn-secondary btn-sm"
+                                    data-id="{{ ds.id }}"
+                                    data-name="{{ ds.name }}"
+                                    data-url="{{ ds.api_url }}"
+                                    data-tw="{{ ds.time_window }}"
+                                    data-decoder="{{ ds.decoder_type }}"
+                                    onclick="openEdit(this)">✎ Edit</button>
+
+                            <form method="POST" action="{{ url_for('toggle_datasource', ds_id=ds.id) }}" style="display:inline">
+                                <button type="submit" class="btn btn-sm {% if ds.enabled %}btn-warning{% else %}btn-success{% endif %}">
+                                    {{ '⏸ Disable' if ds.enabled else '▶ Enable' }}
+                                </button>
+                            </form>
+
+                            <form method="POST" action="{{ url_for('delete_datasource', ds_id=ds.id) }}" style="display:inline"
+                                  onsubmit="return confirm('Delete this data source?')">
+                                <button type="submit" class="btn btn-danger btn-sm">✕ Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% else %}
+    <p class="muted" style="margin-top:1rem;">No data sources configured yet.</p>
+    {% endif %}
+</div>
+
+<!-- Edit modal -->
+<div id="edit-overlay" class="modal-overlay" style="display:none" onclick="closeEditOnBackdrop(event)">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Data Source</h3>
+            <button class="close-btn" onclick="closeEdit()">✕</button>
+        </div>
+        <form id="edit-form" method="POST">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="edit-name">Name</label>
+                    <input type="text" id="edit-name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-time-window">Time Window</label>
+                    <input type="text" id="edit-time-window" name="time_window">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="edit-api-url">API URL</label>
+                <input type="text" id="edit-api-url" name="api_url" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-bearer-token">Bearer Token <span class="label-hint">(leave blank to keep current)</span></label>
+                <input type="text" id="edit-bearer-token" name="bearer_token" placeholder="Leave blank to keep existing token">
+            </div>
+            <div class="form-group">
+                <label for="edit-decoder-type">Device / Decoder</label>
+                <select id="edit-decoder-type" name="decoder_type">
+                    {% for key, label in decoder_choices %}
+                    <option value="{{ key }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <button type="button" class="btn btn-ghost" onclick="closeEdit()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openEdit(btn) {
+    document.getElementById('edit-form').action = '/datasources/' + btn.dataset.id + '/edit';
+    document.getElementById('edit-name').value = btn.dataset.name;
+    document.getElementById('edit-api-url').value = btn.dataset.url;
+    document.getElementById('edit-time-window').value = btn.dataset.tw;
+    document.getElementById('edit-bearer-token').value = '';
+    document.getElementById('edit-decoder-type').value = btn.dataset.decoder;
+    document.getElementById('edit-overlay').style.display = 'flex';
+    document.getElementById('edit-name').focus();
+}
+
+function closeEdit() {
+    document.getElementById('edit-overlay').style.display = 'none';
+}
+
+function closeEditOnBackdrop(e) {
+    if (e.target === document.getElementById('edit-overlay')) closeEdit();
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeEdit(); });
+</script>
+{% endblock %}

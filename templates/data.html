@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}Data — LoraMap{% endblock %}
+{% block body_class %}dashboard-page{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h2 class="page-title">All Messages</h2>
+
+    <!-- Filters -->
+    <section class="card">
+        <div class="card-header">
+            <h3 class="card-title">Filters</h3>
+        </div>
+        <div class="filter-bar">
+            <div class="form-group">
+                <label for="filter-device">Device</label>
+                <select id="filter-device" class="select-sm">
+                    <option value="">All devices</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="filter-from">From</label>
+                <input type="datetime-local" id="filter-from" class="input-sm">
+            </div>
+            <div class="form-group">
+                <label for="filter-to">To</label>
+                <input type="datetime-local" id="filter-to" class="input-sm">
+            </div>
+            <div class="form-group filter-actions">
+                <button class="btn btn-secondary" onclick="applyFilters()">Apply</button>
+                <button class="btn btn-ghost" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Messages table -->
+    <section class="card">
+        <div class="card-header">
+            <h3 class="card-title">Messages</h3>
+            <span id="row-count" class="muted small"></span>
+        </div>
+        <div class="table-wrapper">
+            <table class="data-table" id="messages-table">
+                <thead>
+                    <tr>
+                        <th>Time (UTC)</th>
+                        <th>Device</th>
+                        <th>Frame #</th>
+                        <th>Latitude</th>
+                        <th>Longitude</th>
+                        <th>Battery</th>
+                        <th>Pos. Status</th>
+                        <th>RSSI</th>
+                        <th>Ch. RSSI</th>
+                        <th>SNR</th>
+                        <th>Channel</th>
+                        <th>Gateways</th>
+                        <th>SF</th>
+                        <th>Bandwidth</th>
+                        <th>Coding Rate</th>
+                        <th>Airtime</th>
+                    </tr>
+                </thead>
+                <tbody id="messages-tbody">
+                    <tr><td colspan="16" class="muted">Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/data.js') }}"></script>
+<script>loadData();</script>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Login — LoraMap{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <h1 class="auth-title">📡 LoraMap</h1>
+            <h2 class="auth-subtitle">Sign In</h2>
+            <form method="POST" action="{{ url_for('login') }}">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required autofocus
+                           placeholder="Enter your username">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required
+                           placeholder="Enter your password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+            </form>
+            <p class="auth-link">Don't have an account? <a href="{{ url_for('register') }}">Register</a></p>
+        </div>
+
+        <div class="stats-strip" id="stats-strip">
+            <div class="stats-strip-item">
+                <span class="stats-strip-value" id="s-total-msg">—</span>
+                <span class="stats-strip-label">Total messages</span>
+            </div>
+            <div class="stats-strip-item">
+                <span class="stats-strip-value" id="s-total-dev">—</span>
+                <span class="stats-strip-label">Total devices</span>
+            </div>
+            <div class="stats-strip-item">
+                <span class="stats-strip-value" id="s-month">—</span>
+                <span class="stats-strip-label">Messages (30 d)</span>
+            </div>
+            <div class="stats-strip-item">
+                <span class="stats-strip-value" id="s-week">—</span>
+                <span class="stats-strip-label">Messages (7 d)</span>
+            </div>
+            <div class="stats-strip-item">
+                <span class="stats-strip-value" id="s-active-dev">—</span>
+                <span class="stats-strip-label">Active devices (30 d)</span>
+            </div>
+            <div class="stats-strip-item">
+                <span class="stats-strip-value" id="s-last">—</span>
+                <span class="stats-strip-label">Last message</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function () {
+    try {
+        const resp = await fetch('/api/stats');
+        if (!resp.ok) return;
+        const d = await resp.json();
+        document.getElementById('s-total-msg').textContent  = d.total_messages.toLocaleString();
+        document.getElementById('s-total-dev').textContent  = d.total_devices.toLocaleString();
+        document.getElementById('s-month').textContent      = d.last_month.toLocaleString();
+        document.getElementById('s-week').textContent       = d.last_week.toLocaleString();
+        document.getElementById('s-active-dev').textContent = d.active_devices.toLocaleString();
+        document.getElementById('s-last').textContent       = d.last_received_at
+            ? new Date(d.last_received_at).toLocaleString(undefined, {
+                  month: 'short', day: 'numeric',
+                  hour: '2-digit', minute: '2-digit' })
+            : '—';
+    } catch (_) {}
+})();
+</script>
+{% endblock %}

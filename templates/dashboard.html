@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — LoraMap{% endblock %}
+{% block body_class %}dashboard-page{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h2 class="page-title">Dashboard</h2>
+
+    <!-- Device summary table -->
+    <section class="card">
+        <h3 class="card-title">Device Summary</h3>
+        <div class="table-wrapper">
+            <table class="data-table" id="device-table">
+                <thead>
+                    <tr>
+                        <th>Device</th>
+                        <th>Last Position</th>
+                        <th>Last GPS At</th>
+                        <th>Battery</th>
+                        <th>RSSI</th>
+                        <th>Ch. RSSI</th>
+                        <th>SNR</th>
+                        <th>Channel</th>
+                        <th>Gateways</th>
+                        <th>SF</th>
+                        <th>Bandwidth</th>
+                        <th>Coding Rate</th>
+                        <th>Airtime</th>
+                        <th>Last Seen</th>
+                        <th>Time Ago</th>
+                        <th>Messages</th>
+                    </tr>
+                </thead>
+                <tbody id="device-table-body">
+                    <tr><td colspan="15" class="muted">Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Charts — row 1 -->
+    <div class="charts-grid">
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Battery (%)</h3>
+                <select id="sel-battery" class="select-sm" onchange="updateChart('battery')">
+                    <option value="">All devices</option>
+                </select>
+            </div>
+            <div class="chart-wrapper"><canvas id="chart-battery"></canvas></div>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">RSSI (dBm)</h3>
+                <select id="sel-rssi" class="select-sm" onchange="updateChart('rssi')">
+                    <option value="">All devices</option>
+                </select>
+            </div>
+            <div class="chart-wrapper"><canvas id="chart-rssi"></canvas></div>
+        </section>
+    </div>
+
+    <!-- Charts — row 2 -->
+    <div class="charts-grid">
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Channel RSSI (dBm)</h3>
+                <select id="sel-channel_rssi" class="select-sm" onchange="updateChart('channel_rssi')">
+                    <option value="">All devices</option>
+                </select>
+            </div>
+            <div class="chart-wrapper"><canvas id="chart-channel_rssi"></canvas></div>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">SNR (dB)</h3>
+                <select id="sel-snr" class="select-sm" onchange="updateChart('snr')">
+                    <option value="">All devices</option>
+                </select>
+            </div>
+            <div class="chart-wrapper"><canvas id="chart-snr"></canvas></div>
+        </section>
+    </div>
+
+    <!-- Charts — row 3 -->
+    <div class="charts-grid">
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Gateway Count</h3>
+                <select id="sel-gateway_count" class="select-sm" onchange="updateChart('gateway_count')">
+                    <option value="">All devices</option>
+                </select>
+            </div>
+            <div class="chart-wrapper"><canvas id="chart-gateway_count"></canvas></div>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Channel Index</h3>
+                <select id="sel-channel_index" class="select-sm" onchange="updateChart('channel_index')">
+                    <option value="">All devices</option>
+                </select>
+            </div>
+            <div class="chart-wrapper"><canvas id="chart-channel_index"></canvas></div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>loadDashboard();</script>
+{% endblock %}
