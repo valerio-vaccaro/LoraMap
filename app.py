@@ -32,6 +32,11 @@ app.config.from_object(Config)
 
 db.init_app(app)
 app.jinja_env.globals['app_version'] = APP_VERSION
+
+
+@app.context_processor
+def inject_globals():
+    return {'now': datetime.utcnow()}
 migrate = Migrate(app, db)
 
 login_manager = LoginManager(app)
