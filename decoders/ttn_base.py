@@ -3,6 +3,7 @@
 Subclass this and implement _decode_payload() to add support for a new
 TTN-connected device type without repeating the envelope boilerplate.
 """
+from typing import Optional
 from utils import parse_datetime
 from .base import BaseDecoder
 
@@ -13,7 +14,7 @@ class TTNBaseDecoder(BaseDecoder):
     _decode_payload(), which subclasses must implement.
     """
 
-    def decode(self, raw: dict) -> dict | None:
+    def decode(self, raw: dict) -> Optional[dict]:
         result = raw.get('result', {})
         if not result:
             return None
@@ -68,7 +69,7 @@ class TTNBaseDecoder(BaseDecoder):
         fields.update(payload_fields)
         return fields
 
-    def _decode_payload(self, uplink: dict) -> dict | None:
+    def _decode_payload(self, uplink: dict) -> Optional[dict]:
         """Decode the device-specific decoded_payload section.
 
         Return a dict of additional fields to merge, or None to skip.

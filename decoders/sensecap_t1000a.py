@@ -9,6 +9,7 @@ Measurement IDs used:
     3000 → Battery (%)
     3576 → Positioning Status
 """
+from typing import Optional
 from .ttn_base import TTNBaseDecoder
 
 
@@ -16,7 +17,7 @@ class SensecapT1000ADecoder(TTNBaseDecoder):
     NAME  = 'sensecap_t1000a'
     LABEL = 'SenseCap T1000-A/B (TTN)'
 
-    def _decode_payload(self, uplink: dict) -> dict | None:
+    def _decode_payload(self, uplink: dict) -> Optional[dict]:
         decoded = uplink.get('decoded_payload')
 
         # ACK / confirmation frames have no decoded_payload — store envelope only

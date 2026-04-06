@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 
 class BaseDecoder(ABC):
@@ -15,7 +16,7 @@ class BaseDecoder(ABC):
     LABEL: str = None
 
     @abstractmethod
-    def decode(self, raw: dict) -> dict | None:
+    def decode(self, raw: dict) -> Optional[dict]:
         """Parse one raw JSON dict.
 
         Returns a dict with at minimum:
