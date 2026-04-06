@@ -1,3 +1,4 @@
+import subprocess
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_migrate import Migrate
@@ -10,10 +11,27 @@ from models import db, User, DataSource, UplinkMessage
 from utils import parse_and_store, parse_lines, parse_datetime
 from decoders.registry import DECODER_CHOICES
 
+
+def _get_version() -> str:
+    """Return the latest git tag, or 'dev' if none exist."""
+    try:
+        tag = subprocess.check_output(
+            ['git', 'describe', '--tags', '--abbrev=0'],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+        return tag or 'dev'
+    except Exception:
+        return 'dev'
+
+
+APP_VERSION = _get_version()
+
 app = Flask(__name__)
 app.config.from_object(Config)
 
 db.init_app(app)
+app.jinja_env.globals['app_version'] = APP_VERSION
 migrate = Migrate(app, db)
 
 login_manager = LoginManager(app)
