@@ -82,21 +82,21 @@ function renderDeviceTable(devices) {
 
         return `<tr>
             <td><strong>${d.device_id}</strong></td>
-            <td class="mono">${pos}</td>
-            <td class="mono small">${lastGps}</td>
+            <td class="mono col-hide-mobile">${pos}</td>
+            <td class="mono small col-hide-mobile">${lastGps}</td>
             <td>${batteryBadge(d.last_battery)}</td>
             <td>${v(d.last_rssi, ' dBm')}</td>
-            <td>${v(d.last_channel_rssi, ' dBm')}</td>
-            <td>${v(d.last_snr, ' dB')}</td>
-            <td>${v(d.last_channel_index)}</td>
-            <td>${v(d.last_gateway_count)}</td>
-            <td>${d.last_spreading_factor != null ? 'SF' + d.last_spreading_factor : '—'}</td>
-            <td>${d.last_bandwidth != null ? d.last_bandwidth / 1000 + ' kHz' : '—'}</td>
-            <td>${v(d.last_coding_rate)}</td>
-            <td>${v(d.last_consumed_airtime)}</td>
+            <td class="col-hide-mobile">${v(d.last_channel_rssi, ' dBm')}</td>
+            <td class="col-hide-mobile">${v(d.last_snr, ' dB')}</td>
+            <td class="col-hide-mobile">${v(d.last_channel_index)}</td>
+            <td class="col-hide-mobile">${v(d.last_gateway_count)}</td>
+            <td class="col-hide-mobile">${d.last_spreading_factor != null ? 'SF' + d.last_spreading_factor : '—'}</td>
+            <td class="col-hide-mobile">${d.last_bandwidth != null ? d.last_bandwidth / 1000 + ' kHz' : '—'}</td>
+            <td class="col-hide-mobile">${v(d.last_coding_rate)}</td>
+            <td class="col-hide-mobile">${v(d.last_consumed_airtime)}</td>
             <td class="mono">${lastSeen}</td>
             <td><span class="ago-badge ${agoClass}">${formatTimeAgo(d.seconds_ago)}</span></td>
-            <td>${d.message_count}</td>
+            <td class="col-hide-mobile">${d.message_count}</td>
         </tr>`;
     }).join('');
 }

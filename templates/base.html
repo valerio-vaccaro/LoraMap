@@ -17,10 +17,11 @@
     {% if current_user.is_authenticated %}
     <div class="navbar-links">
         <a href="{{ url_for('map_view') }}" class="nav-link {% if request.endpoint == 'map_view' %}active{% endif %}">Map</a>
+        <a href="{{ url_for('tracker') }}" class="nav-link {% if request.endpoint == 'tracker' %}active{% endif %}">Tracker</a>
         <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">Dashboard</a>
         <a href="{{ url_for('data_view') }}" class="nav-link {% if request.endpoint == 'data_view' %}active{% endif %}">Data</a>
         <a href="{{ url_for('datasources') }}" class="nav-link {% if request.endpoint == 'datasources' %}active{% endif %}">Sources</a>
-        <a href="{{ url_for('profile') }}" class="nav-user {% if request.endpoint == 'profile' %}active{% endif %}">{{ current_user.username }}</a>
+        <a href="{{ url_for('profile') }}" class="nav-user {% if request.endpoint == 'profile' %}active{% endif %}">👤 {{ current_user.username }}</a>
         <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
     </div>
     {% endif %}
@@ -59,6 +60,7 @@
     tick();
     setInterval(tick, 10000);
 })();
+
 </script>
 </body>
 </html>

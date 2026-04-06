@@ -122,6 +122,12 @@ def map_view():
     return render_template('map.html', google_maps_key=app.config.get('GOOGLE_MAPS_API_KEY', ''))
 
 
+@app.route('/tracker')
+@login_required
+def tracker():
+    return render_template('tracker.html', google_maps_key=app.config.get('GOOGLE_MAPS_API_KEY', ''))
+
+
 @app.route('/dashboard')
 @login_required
 def dashboard():

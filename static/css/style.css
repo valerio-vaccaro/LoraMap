@@ -804,8 +804,326 @@ body.content-page { display: flex; flex-direction: column; }
 .footer-sep  { color: var(--border, #ccc); }
 .footer-license { opacity: 0.7; }
 
-/* ── Responsive ──────────────────────────────────────────────────────────── */
+/* ── Tracker page ────────────────────────────────────────────────────────── */
+body.tracker-page {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tracker-layout {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* Map takes top portion — fixed height so info panel is always visible */
+.tracker-map-wrap {
+    flex: 0 0 52%;
+    position: relative;
+    min-height: 200px;
+}
+
+#tracker-map {
+    width: 100%;
+    height: 100%;
+}
+
+/* Device chips bar overlaid on map bottom edge */
+.device-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.4rem 0.6rem;
+    background: linear-gradient(transparent, rgba(0,0,0,0.35));
+    pointer-events: none;  /* clicks pass through to map */
+}
+
+.dev-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 20px;
+    border: 1.5px solid;
+    background: rgba(255,255,255,0.92);
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    pointer-events: all;
+    white-space: nowrap;
+    transition: transform 0.1s;
+}
+.dev-chip:active { transform: scale(0.95); }
+.dev-chip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Info panel — scrollable bottom area */
+.tracker-info-wrap {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--bg);
+    border-top: 2px solid var(--border);
+    -webkit-overflow-scrolling: touch;
+}
+
+.tracker-info-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 80px;
+}
+.ti-hint {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Detail content */
+.ti-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 0.75rem 1rem 0.5rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.ti-badge {
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0.25rem 0.65rem;
+    border-radius: 20px;
+}
+.ti-time {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-left: auto;
+}
+
+/* 2-column card grid, collapses to 1 col on narrow screens */
+.ti-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+    padding: 0.75rem;
+}
+
+.ti-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.65rem 0.75rem;
+}
+.ti-card-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: var(--text-muted);
+    margin-bottom: 0.45rem;
+}
+.ti-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.18rem 0;
+    border-bottom: 1px solid var(--bg);
+    font-size: 0.82rem;
+}
+.ti-row:last-child { border-bottom: none; }
+.ti-label { color: var(--text-muted); white-space: nowrap; }
+.ti-value { font-weight: 600; text-align: right; }
+.ti-unit  { font-weight: 400; color: var(--text-muted); font-size: 0.75rem; }
+
+/* ── Responsive — tablet (≤ 900 px) ─────────────────────────────────────── */
 @media (max-width: 900px) {
     .charts-grid { grid-template-columns: 1fr; }
     :root { --sidebar-w: 220px; --detail-w: 240px; }
+}
+
+/* ── Responsive — mobile (≤ 768 px) ─────────────────────────────────────── */
+@media (max-width: 768px) {
+
+    /* Two-row navbar: brand+clock on top, links scroll horizontally below */
+    :root { --navbar-h: 88px; }  /* 52px top row + 36px links row */
+
+    .navbar {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 0;
+        gap: 0;
+    }
+
+    /* Top row: brand + clock */
+    .navbar-brand {
+        height: 52px;
+        padding: 0 1rem;
+    }
+    .nav-clock {
+        height: 52px;
+        display: flex;
+        align-items: center;
+        padding-right: 1rem;
+        margin-left: auto;
+    }
+
+    /* Links row: full-width strip, horizontally scrollable, no wrap */
+    .navbar-links {
+        display: flex;
+        width: 100%;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        background: rgba(0,0,0,0.18);
+        border-top: 1px solid rgba(255,255,255,0.12);
+        gap: 0;
+        margin-left: 0;
+        padding: 0 0.25rem;
+        height: 36px;
+    }
+    .navbar-links::-webkit-scrollbar { display: none; }
+
+    .nav-link, .nav-user {
+        flex-shrink: 0;
+        padding: 0 0.85rem;
+        height: 36px;
+        line-height: 36px;
+        font-size: 0.82rem;
+        border-radius: 0;
+        border: none;
+        margin: 0;
+        white-space: nowrap;
+    }
+    .nav-user {
+        border-left: 1px solid rgba(255,255,255,0.2);
+        margin-left: auto;
+        color: rgba(255,255,255,0.85);
+        padding-right: 1rem;
+    }
+
+    /* Map sidebar: slide in as overlay, offset by two-row navbar */
+    .sidebar {
+        position: fixed;
+        top: var(--navbar-h);
+        left: 0;
+        bottom: 0;
+        z-index: 200;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        box-shadow: 4px 0 16px rgba(0,0,0,0.2);
+        width: min(var(--sidebar-w), 85vw);
+    }
+    .sidebar.sidebar-open { transform: translateX(0); }
+
+    .sidebar-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        top: var(--navbar-h);
+        background: rgba(0,0,0,0.4);
+        z-index: 199;
+    }
+    .sidebar-backdrop.backdrop-visible { display: block; }
+
+    .sidebar-fab {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 0.75rem;
+        left: 0.75rem;
+        z-index: 100;
+        width: 40px;
+        height: 40px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 50%;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+        font-size: 1.1rem;
+        cursor: pointer;
+    }
+
+    /* Detail panel full-width on mobile */
+    .detail-panel {
+        position: fixed !important;
+        bottom: 0; left: 0; right: 0;
+        top: auto !important;
+        width: 100% !important;
+        max-height: 55vh;
+        overflow-y: auto;
+        border-radius: 12px 12px 0 0;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+        z-index: 300;
+    }
+
+    /* Dashboard / content pages */
+    .dashboard-container { padding: 0.75rem; gap: 0.75rem; }
+    .card { padding: 0.9rem; }
+    .page-title { font-size: 1.15rem; }
+
+    /* Form rows collapse to single column */
+    .form-row { grid-template-columns: 1fr; gap: 0; }
+
+    /* Filter bar: full-width inputs */
+    .filter-bar .form-group { min-width: 0; flex: 1 1 100%; }
+    .filter-bar .filter-actions { flex: 1 1 100%; }
+
+    /* Action buttons in tables: wrap nicely */
+    .action-cell { flex-wrap: wrap; gap: 0.35rem; }
+
+    /* Datasource table: hide secondary columns */
+    .data-table .col-hide-mobile { display: none; }
+
+    /* Modal fills screen */
+    .modal-overlay { padding: 0; align-items: flex-end; }
+    .modal-card {
+        max-width: 100%;
+        border-radius: 12px 12px 0 0;
+        max-height: 92vh;
+        overflow-y: auto;
+    }
+
+    /* Auth pages */
+    .auth-container { padding: 1rem; }
+    .auth-card { padding: 1.75rem 1.25rem; }
+    .stats-strip { grid-template-columns: repeat(2, 1fr); }
+
+    /* Profile stats row */
+    .profile-stats { gap: 0.6rem; }
+    .stat-box { padding: 0.6rem 0.75rem; }
+    .stat-value { font-size: 1.3rem; }
+}
+
+/* ── Responsive — small phones (≤ 480 px) ───────────────────────────────── */
+@media (max-width: 480px) {
+    .stats-strip { grid-template-columns: 1fr 1fr; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .chart-wrapper { height: 200px; }
+}
+
+/* Sidebar FAB hidden on desktop */
+.sidebar-fab { display: none; }
+.sidebar-backdrop { display: none; }
+
+/* Tracker: single-column cards on narrow screens */
+@media (max-width: 500px) {
+    .ti-grid { grid-template-columns: 1fr; }
+    .tracker-map-wrap { flex-basis: 45%; }
 }

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Tracker — LoraMap{% endblock %}
+{% block body_class %}tracker-page{% endblock %}
+
+{% block content %}
+<div class="tracker-layout">
+
+    <!-- Map (top half) -->
+    <div class="tracker-map-wrap">
+        <div id="tracker-map">
+            {% if not google_maps_key %}
+            <div class="map-warning">
+                ⚠️ Google Maps API key not configured.
+                Set <code>GOOGLE_MAPS_API_KEY</code> in your <code>.env</code> file.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Device chips overlay -->
+        <div id="device-bar" class="device-bar"></div>
+    </div>
+
+    <!-- Info panel (bottom half) -->
+    <div class="tracker-info-wrap">
+        <div id="tracker-info" class="tracker-info-placeholder">
+            <span class="ti-hint">📍 Tap a pin on the map to see details</span>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/tracker.js') }}"></script>
+{% if google_maps_key %}
+<script async
+    src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_key }}&callback=initTrackerMap&v=weekly">
+</script>
+{% endif %}
+{% endblock %}

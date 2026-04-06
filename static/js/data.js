@@ -93,20 +93,20 @@ function renderTable(messages) {
         return `<tr>
             <td class="mono small">${time}</td>
             <td><strong>${m.device_id}</strong></td>
-            <td>${v(m.f_cnt)}</td>
-            <td class="mono">${lat}</td>
-            <td class="mono">${lon}</td>
+            <td class="col-hide-mobile">${v(m.f_cnt)}</td>
+            <td class="mono col-hide-mobile">${lat}</td>
+            <td class="mono col-hide-mobile">${lon}</td>
             <td>${batteryBadge(m.battery)}</td>
-            <td>${v(m.positioning_status)}</td>
+            <td class="col-hide-mobile">${v(m.positioning_status)}</td>
             <td>${v(m.rssi, ' dBm')}</td>
-            <td>${v(m.channel_rssi, ' dBm')}</td>
-            <td>${v(m.snr, ' dB')}</td>
-            <td>${v(m.channel_index)}</td>
-            <td>${v(m.gateway_count)}</td>
-            <td>${m.spreading_factor != null ? 'SF' + m.spreading_factor : '—'}</td>
-            <td>${m.bandwidth != null ? m.bandwidth / 1000 + ' kHz' : '—'}</td>
-            <td>${v(m.coding_rate)}</td>
-            <td>${v(m.consumed_airtime)}</td>
+            <td class="col-hide-mobile">${v(m.channel_rssi, ' dBm')}</td>
+            <td class="col-hide-mobile">${v(m.snr, ' dB')}</td>
+            <td class="col-hide-mobile">${v(m.channel_index)}</td>
+            <td class="col-hide-mobile">${v(m.gateway_count)}</td>
+            <td class="col-hide-mobile">${m.spreading_factor != null ? 'SF' + m.spreading_factor : '—'}</td>
+            <td class="col-hide-mobile">${m.bandwidth != null ? m.bandwidth / 1000 + ' kHz' : '—'}</td>
+            <td class="col-hide-mobile">${v(m.coding_rate)}</td>
+            <td class="col-hide-mobile">${v(m.consumed_airtime)}</td>
         </tr>`;
     }).join('');
 }

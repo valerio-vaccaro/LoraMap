@@ -4,8 +4,14 @@
 
 {% block content %}
 <div class="map-layout">
+    <!-- Mobile sidebar toggle -->
+    <button class="sidebar-fab" id="sidebar-fab" onclick="toggleSidebar()" aria-label="Filters">
+        ☰
+    </button>
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebar()"></div>
+
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="map-sidebar">
         <div class="sidebar-section">
             <h3 class="sidebar-title">View Mode</h3>
             <div class="radio-group">
@@ -72,4 +78,12 @@
     src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_key }}&callback=initMap&v=weekly">
 </script>
 {% endif %}
+<script>
+function toggleSidebar() {
+    const sidebar  = document.getElementById('map-sidebar');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    const open = sidebar.classList.toggle('sidebar-open');
+    backdrop.classList.toggle('backdrop-visible', open);
+}
+</script>
 {% endblock %}
