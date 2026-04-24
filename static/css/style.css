@@ -434,6 +434,18 @@ body.map-page {
     gap: 0.4rem;
 }
 
+.quick-range-group {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.4rem;
+}
+
+.quick-range-btn.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
 .radio-label {
     display: flex;
     align-items: center;

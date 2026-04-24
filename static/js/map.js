@@ -12,6 +12,12 @@ const DEVICE_COLORS = [
     '#6D4C41', // brown
     '#546E7A', // blue-grey
 ];
+const QUICK_RANGE_DAYS = {
+    day: 1,
+    week: 7,
+    month: 30,
+    year: 365,
+};
 
 let map;
 let markers = {};       // device_id -> [google.maps.Marker]
@@ -21,6 +27,7 @@ let colorIndex = 0;
 let allPositions = [];
 let viewMode = 'all';
 let enabledDevices = new Set();
+let activeQuickRange = null;
 
 // Called by Google Maps script callback
 async function initMap() {
@@ -33,13 +40,8 @@ async function initMap() {
         fullscreenControl: true,
     });
 
-    const rangeResp = await fetch('/api/messages/range');
-    if (rangeResp.ok) {
-        const range = await rangeResp.json();
-        if (range.min) document.getElementById('from-time').value = range.min.slice(0, 16);
-        if (range.max) document.getElementById('to-time').value   = range.max.slice(0, 16);
-    }
-
+    setQuickRange('week', false);
+    updateLastUpdateUtc();
     loadPositions();
 }
 
@@ -85,6 +87,7 @@ async function loadPositions() {
         allPositions = data.positions || [];
         updateDeviceList(data.device_ids || []);
         renderPositions();
+        updateLastUpdateUtc();
     } catch (e) {
         showToast('Failed to load positions: ' + e.message, 'error');
     }
@@ -199,13 +202,39 @@ function setMode(mode) {
 }
 
 function applyFilters() {
+    setQuickRangeActive(null);
     loadPositions();
 }
 
 function clearFilters() {
     document.getElementById('from-time').value = '';
     document.getElementById('to-time').value = '';
+    setQuickRangeActive(null);
     loadPositions();
+}
+
+function setQuickRange(rangeKey, shouldLoad = true) {
+    const days = QUICK_RANGE_DAYS[rangeKey];
+    if (!days) return;
+    const now = new Date();
+    const from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+    document.getElementById('from-time').value = toUtcDatetimeLocalValue(from);
+    document.getElementById('to-time').value = toUtcDatetimeLocalValue(now);
+    setQuickRangeActive(rangeKey);
+
+    if (shouldLoad) {
+        loadPositions();
+    }
+}
+
+function setQuickRangeActive(rangeKey) {
+    activeQuickRange = rangeKey;
+    Object.keys(QUICK_RANGE_DAYS).forEach(key => {
+        const el = document.getElementById(`range-${key}`);
+        if (!el) return;
+        el.classList.toggle('active', key === activeQuickRange);
+    });
 }
 
 async function fetchNewData() {
@@ -225,6 +254,7 @@ async function fetchNewData() {
             showToast(`Inserted ${data.inserted} new record(s)`);
             status.textContent = `+${data.inserted} new`;
             await loadPositions();
+            updateLastUpdateUtc();
         }
     } catch (e) {
         showToast('Fetch failed: ' + e.message, 'error');
@@ -233,6 +263,27 @@ async function fetchNewData() {
         btn.disabled = false;
         btn.textContent = '↻ Fetch New Data';
     }
+}
+
+function toUtcDatetimeLocalValue(date) {
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    const h = String(date.getUTCHours()).padStart(2, '0');
+    const min = String(date.getUTCMinutes()).padStart(2, '0');
+    return `${y}-${m}-${d}T${h}:${min}`;
+}
+
+function updateLastUpdateUtc(date = new Date()) {
+    const el = document.getElementById('last-update-utc');
+    if (!el) return;
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    const h = String(date.getUTCHours()).padStart(2, '0');
+    const min = String(date.getUTCMinutes()).padStart(2, '0');
+    const s = String(date.getUTCSeconds()).padStart(2, '0');
+    el.textContent = `${y}-${m}-${d} ${h}:${min}:${s} UTC`;
 }
 
 function showDetailPanel(pos, deviceId) {
