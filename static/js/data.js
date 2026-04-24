@@ -1,4 +1,11 @@
 /* LoraMap — Data page JS */
+const QUICK_RANGE_DAYS = {
+    day: 1,
+    week: 7,
+    month: 30,
+    year: 365,
+};
+let activeQuickRange = null;
 
 async function loadData() {
     // Populate device select
@@ -14,20 +21,9 @@ async function loadData() {
         });
     }
 
-    // Pre-fill from/to with the full data range
-    const rangeResp = await fetch('/api/messages/range');
-    if (rangeResp.ok) {
-        const range = await rangeResp.json();
-        if (range.min) document.getElementById('filter-from').value = isoToDatetimeLocal(range.min);
-        if (range.max) document.getElementById('filter-to').value   = isoToDatetimeLocal(range.max);
-    }
-
+    setQuickRange('week', false);
+    updateLastUpdateUtc();
     await fetchMessages();
-}
-
-// Convert ISO timestamp to the value format expected by datetime-local inputs (YYYY-MM-DDTHH:MM)
-function isoToDatetimeLocal(iso) {
-    return iso.slice(0, 16);
 }
 
 async function fetchMessages() {
@@ -50,9 +46,11 @@ async function fetchMessages() {
     }
     const data = await resp.json();
     renderTable(data.messages || []);
+    updateLastUpdateUtc();
 }
 
 function applyFilters() {
+    setQuickRangeActive(null);
     fetchMessages();
 }
 
@@ -60,7 +58,53 @@ function clearFilters() {
     document.getElementById('filter-device').value = '';
     document.getElementById('filter-from').value = '';
     document.getElementById('filter-to').value = '';
+    setQuickRangeActive(null);
     fetchMessages();
+}
+
+function setQuickRange(rangeKey, shouldLoad = true) {
+    const days = QUICK_RANGE_DAYS[rangeKey];
+    if (!days) return;
+    const now = new Date();
+    const from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+    document.getElementById('filter-from').value = toUtcDatetimeLocalValue(from);
+    document.getElementById('filter-to').value = toUtcDatetimeLocalValue(now);
+    setQuickRangeActive(rangeKey);
+
+    if (shouldLoad) {
+        fetchMessages();
+    }
+}
+
+function setQuickRangeActive(rangeKey) {
+    activeQuickRange = rangeKey;
+    Object.keys(QUICK_RANGE_DAYS).forEach(key => {
+        const el = document.getElementById(`range-${key}`);
+        if (!el) return;
+        el.classList.toggle('active', key === activeQuickRange);
+    });
+}
+
+function toUtcDatetimeLocalValue(date) {
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    const h = String(date.getUTCHours()).padStart(2, '0');
+    const min = String(date.getUTCMinutes()).padStart(2, '0');
+    return `${y}-${m}-${d}T${h}:${min}`;
+}
+
+function updateLastUpdateUtc(date = new Date()) {
+    const el = document.getElementById('last-update-utc');
+    if (!el) return;
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    const h = String(date.getUTCHours()).padStart(2, '0');
+    const min = String(date.getUTCMinutes()).padStart(2, '0');
+    const s = String(date.getUTCSeconds()).padStart(2, '0');
+    el.textContent = `${y}-${m}-${d} ${h}:${min}:${s} UTC`;
 }
 
 function v(val, suffix = '') {

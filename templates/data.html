@@ -19,6 +19,15 @@
                 </select>
             </div>
             <div class="form-group">
+                <label>Quick Range</label>
+                <div class="quick-range-group">
+                    <button class="btn btn-ghost btn-sm quick-range-btn" id="range-day" onclick="setQuickRange('day')">1D</button>
+                    <button class="btn btn-ghost btn-sm quick-range-btn" id="range-week" onclick="setQuickRange('week')">1W</button>
+                    <button class="btn btn-ghost btn-sm quick-range-btn" id="range-month" onclick="setQuickRange('month')">1M</button>
+                    <button class="btn btn-ghost btn-sm quick-range-btn" id="range-year" onclick="setQuickRange('year')">1Y</button>
+                </div>
+            </div>
+            <div class="form-group">
                 <label for="filter-from">From</label>
                 <input type="datetime-local" id="filter-from" class="input-sm">
             </div>
@@ -29,6 +38,10 @@
             <div class="form-group filter-actions">
                 <button class="btn btn-secondary" onclick="applyFilters()">Apply</button>
                 <button class="btn btn-ghost" onclick="clearFilters()">Clear</button>
+            </div>
+            <div class="form-group">
+                <label>Last update (UTC)</label>
+                <div id="last-update-utc" class="status-text">—</div>
             </div>
         </div>
     </section>
