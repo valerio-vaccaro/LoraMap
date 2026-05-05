@@ -82,9 +82,6 @@ async function loadPositions() {
     const fromVal = document.getElementById('from-time').value;
     const toVal = document.getElementById('to-time').value;
 
-    if (enabledDevices.size > 0) {
-        params.set('devices', Array.from(enabledDevices).join(','));
-    }
     if (fromVal) params.set('from', fromVal.replace('T', ' '));
     if (toVal)   params.set('to',   toVal.replace('T', ' '));
     params.set('last_only', viewMode === 'last' ? 'true' : 'false');
