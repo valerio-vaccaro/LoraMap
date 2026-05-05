@@ -3,13 +3,13 @@
 const DEVICE_COLORS = [
     '#E53935', '#1E88E5', '#43A047', '#F4511E',
     '#8E24AA', '#00ACC1', '#FB8C00', '#D81B60',
-    '#6D4C41', '#546E7A',
+    '#6D4C41', '#546E7A', '#7CB342', '#3949AB',
+    '#00897B', '#C0CA33', '#5E35B1', '#FDD835',
 ];
 
 let map;
 let markers = {};
 let deviceColors = {};
-let colorIndex = 0;
 const REFRESH_MS = 60_000;
 
 // ── Google Maps callback ──────────────────────────────────────────────────────
@@ -48,8 +48,12 @@ async function loadPositions() {
 
 function getColor(deviceId) {
     if (!deviceColors[deviceId]) {
-        deviceColors[deviceId] = DEVICE_COLORS[colorIndex % DEVICE_COLORS.length];
-        colorIndex++;
+        const key = String(deviceId || '');
+        let hash = 0;
+        for (let i = 0; i < key.length; i++) {
+            hash = ((hash * 31) + key.charCodeAt(i)) >>> 0;
+        }
+        deviceColors[deviceId] = DEVICE_COLORS[hash % DEVICE_COLORS.length];
     }
     return deviceColors[deviceId];
 }

@@ -11,6 +11,12 @@ const DEVICE_COLORS = [
     '#D81B60', // pink
     '#6D4C41', // brown
     '#546E7A', // blue-grey
+    '#7CB342', // light green
+    '#3949AB', // indigo
+    '#00897B', // teal
+    '#C0CA33', // lime
+    '#5E35B1', // deep purple
+    '#FDD835', // yellow
 ];
 const QUICK_RANGE_DAYS = {
     day: 1,
@@ -23,7 +29,6 @@ let map;
 let markers = {};       // device_id -> [google.maps.Marker]
 let polylines = {};     // device_id -> google.maps.Polyline
 let deviceColors = {};
-let colorIndex = 0;
 let allPositions = [];
 let viewMode = 'all';
 let enabledDevices = new Set();
@@ -47,8 +52,12 @@ async function initMap() {
 
 function getDeviceColor(deviceId) {
     if (!deviceColors[deviceId]) {
-        deviceColors[deviceId] = DEVICE_COLORS[colorIndex % DEVICE_COLORS.length];
-        colorIndex++;
+        const key = String(deviceId || '');
+        let hash = 0;
+        for (let i = 0; i < key.length; i++) {
+            hash = ((hash * 31) + key.charCodeAt(i)) >>> 0;
+        }
+        deviceColors[deviceId] = DEVICE_COLORS[hash % DEVICE_COLORS.length];
     }
     return deviceColors[deviceId];
 }
@@ -159,23 +168,27 @@ function renderPositions() {
 
 function updateDeviceList(serverDeviceIds) {
     const isFirstLoad = enabledDevices.size === 0 && Object.keys(deviceColors).length === 0;
+    const visibleIds = Array.from(new Set(serverDeviceIds));
+    const visibleSet = new Set(visibleIds);
 
-    serverDeviceIds.forEach(id => {
+    visibleIds.forEach(id => {
         getDeviceColor(id); // ensure color assigned
         if (isFirstLoad) {
             enabledDevices.add(id); // on first load, enable all devices
         }
     });
 
-    const allIds = Array.from(new Set([...Object.keys(deviceColors), ...serverDeviceIds]));
+    // Keep enabled devices aligned with currently visible filtered devices.
+    enabledDevices = new Set(Array.from(enabledDevices).filter(id => visibleSet.has(id)));
+
     const container = document.getElementById('device-list');
 
-    if (allIds.length === 0) {
+    if (visibleIds.length === 0) {
         container.innerHTML = '<p class="muted">No devices found.</p>';
         return;
     }
 
-    container.innerHTML = allIds.map(deviceId => {
+    container.innerHTML = visibleIds.map(deviceId => {
         const color = getDeviceColor(deviceId);
         const checked = enabledDevices.has(deviceId);
         return `<label class="device-item">
