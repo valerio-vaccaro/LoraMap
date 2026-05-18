@@ -5,7 +5,12 @@ const DEVICE_COLORS = [
     '#8E24AA', '#00ACC1', '#FB8C00', '#D81B60',
     '#6D4C41', '#546E7A', '#7CB342', '#3949AB',
     '#00897B', '#C0CA33', '#5E35B1', '#FDD835',
+    '#8D6E63', '#5C6BC0', '#26A69A', '#9CCC65',
+    '#FF7043', '#EC407A', '#AB47BC', '#29B6F6',
+    '#66BB6A', '#FFCA28', '#FFA726', '#BDBDBD',
+    '#78909C', '#26C6DA', '#D4E157', '#EF5350',
 ];
+const COLOR_STORAGE_KEY = 'loramap.deviceColors.v1';
 
 // metric -> { chart instance, label, unit }
 const CHART_DEFS = {
@@ -19,8 +24,34 @@ const CHART_DEFS = {
 
 const charts = {};   // metric -> Chart instance
 let deviceList = [];
+let customDeviceColors = {};
+
+function loadCustomColors() {
+    try {
+        const raw = localStorage.getItem(COLOR_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        if (parsed && typeof parsed === 'object') {
+            customDeviceColors = parsed;
+        }
+    } catch {
+        customDeviceColors = {};
+    }
+}
+
+function saveCustomColors() {
+    localStorage.setItem(COLOR_STORAGE_KEY, JSON.stringify(customDeviceColors));
+}
+
+function normalizeColor(color) {
+    if (typeof color !== 'string') return null;
+    const c = color.trim().toUpperCase();
+    return DEVICE_COLORS.includes(c) ? c : null;
+}
 
 function getDeviceColor(deviceId) {
+    const custom = normalizeColor(customDeviceColors[deviceId]);
+    if (custom) return custom;
+
     const key = String(deviceId || '');
     let hash = 0;
     for (let i = 0; i < key.length; i++) {
@@ -34,6 +65,7 @@ function getDeviceColor(deviceId) {
 // ---------------------------------------------------------------------------
 
 async function loadDashboard() {
+    loadCustomColors();
     const resp = await fetch('/api/devices');
     if (!resp.ok) return;
     const data = await resp.json();
@@ -71,7 +103,7 @@ function batteryBadge(battery) {
 function renderDeviceTable(devices) {
     const tbody = document.getElementById('device-table-body');
     if (!devices.length) {
-        tbody.innerHTML = '<tr><td colspan="16" class="muted">No data yet. Add a data source and fetch.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="17" class="muted">No data yet. Add a data source and fetch.</td></tr>';
         return;
     }
 
@@ -91,8 +123,30 @@ function renderDeviceTable(devices) {
         const agoClass = d.seconds_ago != null && d.seconds_ago > 7200 ? 'ago-old' :
                          d.seconds_ago != null && d.seconds_ago > 1800 ? 'ago-warn' : 'ago-ok';
 
+        const color = getDeviceColor(d.device_id);
+        const encodedId = encodeURIComponent(d.device_id);
+
         return `<tr>
             <td><strong>${d.device_id}</strong></td>
+            <td>
+                <details class="color-picker">
+                    <summary>
+                        <span class="device-color-dot" style="background:${color}"></span>
+                        <span class="mono small">${color}</span>
+                    </summary>
+                    <div class="color-grid">
+                        ${DEVICE_COLORS.map(c => `
+                            <button
+                                type="button"
+                                class="color-chip ${c === color ? 'selected' : ''}"
+                                title="${c}"
+                                aria-label="Set color ${c}"
+                                style="background:${c}"
+                                onclick="setDeviceColor('${encodedId}', '${c}')"></button>
+                        `).join('')}
+                    </div>
+                </details>
+            </td>
             <td class="mono col-hide-mobile">${pos}</td>
             <td class="mono small col-hide-mobile">${lastGps}</td>
             <td>${batteryBadge(d.last_battery)}</td>
@@ -110,6 +164,18 @@ function renderDeviceTable(devices) {
             <td class="col-hide-mobile">${d.message_count}</td>
         </tr>`;
     }).join('');
+}
+
+async function setDeviceColor(encodedDeviceId, color) {
+    const deviceId = decodeURIComponent(encodedDeviceId);
+    const normalized = normalizeColor(color);
+    if (!normalized) return;
+    customDeviceColors[deviceId] = normalized;
+    saveCustomColors();
+    renderDeviceTable(deviceList);
+    for (const metric of Object.keys(CHART_DEFS)) {
+        await updateChart(metric);
+    }
 }
 
 // ---------------------------------------------------------------------------

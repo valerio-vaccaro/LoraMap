@@ -17,7 +17,24 @@ const DEVICE_COLORS = [
     '#C0CA33', // lime
     '#5E35B1', // deep purple
     '#FDD835', // yellow
+    '#8D6E63', // brown 2
+    '#5C6BC0', // indigo 2
+    '#26A69A', // teal 2
+    '#9CCC65', // light green 2
+    '#FF7043', // deep orange 2
+    '#EC407A', // pink 2
+    '#AB47BC', // purple 2
+    '#29B6F6', // light blue
+    '#66BB6A', // green 2
+    '#FFCA28', // amber
+    '#FFA726', // orange 2
+    '#BDBDBD', // grey
+    '#78909C', // blue-grey 2
+    '#26C6DA', // cyan 2
+    '#D4E157', // lime 2
+    '#EF5350', // red 2
 ];
+const COLOR_STORAGE_KEY = 'loramap.deviceColors.v1';
 const QUICK_RANGE_DAYS = {
     day: 1,
     week: 7,
@@ -51,6 +68,19 @@ async function initMap() {
 }
 
 function getDeviceColor(deviceId) {
+    try {
+        const raw = localStorage.getItem(COLOR_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        const custom = parsed && typeof parsed === 'object' ? parsed[deviceId] : null;
+        const normalized = typeof custom === 'string' ? custom.trim().toUpperCase() : null;
+        if (normalized && DEVICE_COLORS.includes(normalized)) {
+            deviceColors[deviceId] = normalized;
+            return normalized;
+        }
+    } catch {
+        // ignore malformed storage and fallback to deterministic color
+    }
+
     if (!deviceColors[deviceId]) {
         const key = String(deviceId || '');
         let hash = 0;

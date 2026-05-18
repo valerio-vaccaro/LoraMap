@@ -652,6 +652,60 @@ body.dashboard-page { display: flex; flex-direction: column; }
 .ago-warn { background: #FFF8E1; color: #E65100; }
 .ago-old  { background: #FFEBEE; color: #C62828; }
 
+.color-picker {
+    position: relative;
+}
+
+.color-picker > summary {
+    list-style: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.18rem 0.45rem;
+    background: #fff;
+}
+
+.color-picker > summary::-webkit-details-marker {
+    display: none;
+}
+
+.device-color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    display: inline-block;
+}
+
+.color-grid {
+    margin-top: 0.35rem;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 0.35rem;
+    width: 180px;
+}
+
+.color-chip {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.24);
+    cursor: pointer;
+}
+
+.color-chip.selected {
+    outline: 2px solid #263238;
+    outline-offset: 1px;
+}
+
 /* ── Content pages (datasources) ─────────────────────────────────────────── */
 body.content-page { display: flex; flex-direction: column; }
 
@@ -829,6 +883,43 @@ body.tracker-page {
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
+}
+
+.tracker-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.tracker-filter-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    flex: 0 0 auto;
+}
+
+.tracker-device-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.tracker-filter-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--text);
+}
+
+.tracker-filter-item input[type="checkbox"] {
+    margin: 0;
 }
 
 /* Map takes top portion — fixed height so info panel is always visible */

@@ -1,4 +1,15 @@
 /* LoraMap — Data page JS */
+const DEVICE_COLORS = [
+    '#E53935', '#1E88E5', '#43A047', '#F4511E',
+    '#8E24AA', '#00ACC1', '#FB8C00', '#D81B60',
+    '#6D4C41', '#546E7A', '#7CB342', '#3949AB',
+    '#00897B', '#C0CA33', '#5E35B1', '#FDD835',
+    '#8D6E63', '#5C6BC0', '#26A69A', '#9CCC65',
+    '#FF7043', '#EC407A', '#AB47BC', '#29B6F6',
+    '#66BB6A', '#FFCA28', '#FFA726', '#BDBDBD',
+    '#78909C', '#26C6DA', '#D4E157', '#EF5350',
+];
+const COLOR_STORAGE_KEY = 'loramap.deviceColors.v1';
 const QUICK_RANGE_DAYS = {
     day: 1,
     week: 7,
@@ -6,6 +17,25 @@ const QUICK_RANGE_DAYS = {
     year: 365,
 };
 let activeQuickRange = null;
+
+function getDeviceColor(deviceId) {
+    try {
+        const raw = localStorage.getItem(COLOR_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        const custom = parsed && typeof parsed === 'object' ? parsed[deviceId] : null;
+        const normalized = typeof custom === 'string' ? custom.trim().toUpperCase() : null;
+        if (normalized && DEVICE_COLORS.includes(normalized)) return normalized;
+    } catch {
+        // ignore malformed storage and fallback to deterministic color
+    }
+
+    const key = String(deviceId || '');
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) {
+        hash = ((hash * 31) + key.charCodeAt(i)) >>> 0;
+    }
+    return DEVICE_COLORS[hash % DEVICE_COLORS.length];
+}
 
 async function loadData() {
     // Populate device select
@@ -37,11 +67,11 @@ async function fetchMessages() {
     if (to)     params.set('to', to);
 
     const tbody = document.getElementById('messages-tbody');
-    tbody.innerHTML = '<tr><td colspan="16" class="muted">Loading…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="17" class="muted">Loading…</td></tr>';
 
     const resp = await fetch('/api/messages?' + params);
     if (!resp.ok) {
-        tbody.innerHTML = '<tr><td colspan="16" class="muted">Failed to load data.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="17" class="muted">Failed to load data.</td></tr>';
         return;
     }
     const data = await resp.json();
@@ -123,7 +153,7 @@ function renderTable(messages) {
     count.textContent = messages.length ? `${messages.length} row${messages.length !== 1 ? 's' : ''}` : '';
 
     if (!messages.length) {
-        tbody.innerHTML = '<tr><td colspan="16" class="muted">No messages found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="17" class="muted">No messages found.</td></tr>';
         return;
     }
 
@@ -131,12 +161,17 @@ function renderTable(messages) {
         const time = m.received_at
             ? new Date(m.received_at).toISOString().replace('T', ' ').slice(0, 19)
             : '—';
+        const color = getDeviceColor(m.device_id);
         const lat = m.latitude  != null ? m.latitude.toFixed(6)  : '—';
         const lon = m.longitude != null ? m.longitude.toFixed(6) : '—';
 
         return `<tr>
             <td class="mono small">${time}</td>
             <td><strong>${m.device_id}</strong></td>
+            <td>
+                <span class="device-color-dot" style="background:${color}"></span>
+                <span class="mono small">${color}</span>
+            </td>
             <td class="col-hide-mobile">${v(m.f_cnt)}</td>
             <td class="mono col-hide-mobile">${lat}</td>
             <td class="mono col-hide-mobile">${lon}</td>

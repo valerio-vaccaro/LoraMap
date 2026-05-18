@@ -5,11 +5,19 @@ const DEVICE_COLORS = [
     '#8E24AA', '#00ACC1', '#FB8C00', '#D81B60',
     '#6D4C41', '#546E7A', '#7CB342', '#3949AB',
     '#00897B', '#C0CA33', '#5E35B1', '#FDD835',
+    '#8D6E63', '#5C6BC0', '#26A69A', '#9CCC65',
+    '#FF7043', '#EC407A', '#AB47BC', '#29B6F6',
+    '#66BB6A', '#FFCA28', '#FFA726', '#BDBDBD',
+    '#78909C', '#26C6DA', '#D4E157', '#EF5350',
 ];
+const COLOR_STORAGE_KEY = 'loramap.deviceColors.v1';
 
 let map;
 let markers = {};
 let deviceColors = {};
+let allPositions = [];
+let enabledDevices = new Set();
+let knownDevices = new Set();
 const REFRESH_MS = 60_000;
 
 // ── Google Maps callback ──────────────────────────────────────────────────────
@@ -37,8 +45,11 @@ async function loadPositions() {
         const resp = await fetch('/api/positions?last_only=true');
         if (!resp.ok) throw new Error(resp.statusText);
         const data = await resp.json();
-        renderMarkers(data.positions || []);
-        updateDeviceChips(data.positions || []);
+        allPositions = data.positions || [];
+        updateDeviceFilters(allPositions);
+        const visiblePositions = allPositions.filter(p => enabledDevices.has(p.device_id));
+        renderMarkers(visiblePositions);
+        updateDeviceChips(visiblePositions);
     } catch (e) {
         console.error('Failed to load positions:', e);
     }
@@ -47,6 +58,19 @@ async function loadPositions() {
 // ── Map rendering ─────────────────────────────────────────────────────────────
 
 function getColor(deviceId) {
+    try {
+        const raw = localStorage.getItem(COLOR_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        const custom = parsed && typeof parsed === 'object' ? parsed[deviceId] : null;
+        const normalized = typeof custom === 'string' ? custom.trim().toUpperCase() : null;
+        if (normalized && DEVICE_COLORS.includes(normalized)) {
+            deviceColors[deviceId] = normalized;
+            return normalized;
+        }
+    } catch {
+        // ignore malformed storage and fallback to deterministic color
+    }
+
     if (!deviceColors[deviceId]) {
         const key = String(deviceId || '');
         let hash = 0;
@@ -112,6 +136,49 @@ function renderMarkers(positions) {
     if (hasPoints && Object.keys(markers).length <= positions.length) {
         map.fitBounds(bounds, { padding: 60 });
     }
+}
+
+function updateDeviceFilters(positions) {
+    const container = document.getElementById('tracker-device-filters');
+    const deviceIds = Array.from(new Set(positions.map(p => p.device_id))).sort();
+
+    const available = new Set(deviceIds);
+
+    // Remove disappeared devices from current selection/state.
+    enabledDevices = new Set(Array.from(enabledDevices).filter(id => available.has(id)));
+    knownDevices = new Set(Array.from(knownDevices).filter(id => available.has(id)));
+
+    // New devices are enabled by default, while existing manual choices are preserved.
+    deviceIds.forEach(id => {
+        if (!knownDevices.has(id)) {
+            knownDevices.add(id);
+            enabledDevices.add(id);
+        }
+    });
+
+    if (!deviceIds.length) {
+        container.innerHTML = '<span class="muted">No devices</span>';
+        return;
+    }
+
+    container.innerHTML = deviceIds.map(id => {
+        const color = getColor(id);
+        const checked = enabledDevices.has(id) ? 'checked' : '';
+        return `<label class="tracker-filter-item">
+            <input type="checkbox" ${checked} onchange="toggleTrackerDevice('${encodeURIComponent(id)}', this.checked)">
+            <span class="dev-chip-dot" style="background:${color}"></span>
+            <span>${id}</span>
+        </label>`;
+    }).join('');
+}
+
+function toggleTrackerDevice(encodedDeviceId, checked) {
+    const deviceId = decodeURIComponent(encodedDeviceId);
+    if (checked) enabledDevices.add(deviceId);
+    else enabledDevices.delete(deviceId);
+    const visiblePositions = allPositions.filter(p => enabledDevices.has(p.device_id));
+    renderMarkers(visiblePositions);
+    updateDeviceChips(visiblePositions);
 }
 
 // ── Detail panel ──────────────────────────────────────────────────────────────
