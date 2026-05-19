@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}API Docs · LoraMap{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+<style>
+    .api-docs-wrap {
+        max-width: 1280px;
+        margin: 16px auto 24px;
+        padding: 0 12px;
+    }
+    #swagger-ui {
+        border: 1px solid var(--border, #ddd);
+        border-radius: 12px;
+        overflow: hidden;
+        background: #fff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="api-docs-wrap">
+    <div id="swagger-ui"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script>
+window.addEventListener('DOMContentLoaded', function () {
+    window.SwaggerUIBundle({
+        url: '{{ url_for("openapi_spec") }}',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        displayRequestDuration: true,
+        persistAuthorization: true,
+    });
+});
+</script>
+{% endblock %}

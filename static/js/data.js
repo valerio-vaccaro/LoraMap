@@ -8,8 +8,15 @@ const DEVICE_COLORS = [
     '#FF7043', '#EC407A', '#AB47BC', '#29B6F6',
     '#66BB6A', '#FFCA28', '#FFA726', '#BDBDBD',
     '#78909C', '#26C6DA', '#D4E157', '#EF5350',
+    '#C62828', '#1565C0', '#2E7D32', '#E65100',
+    '#6A1B9A', '#00838F', '#EF6C00', '#AD1457',
+    '#4E342E', '#37474F', '#558B2F', '#283593',
+    '#00695C', '#9E9D24', '#4527A0', '#F9A825',
+    '#A1887F', '#7986CB', '#4DB6AC', '#AED581',
+    '#FF8A65', '#F48FB1', '#CE93D8', '#81D4FA',
+    '#A5D6A7', '#FFE082', '#FFCC80', '#E0E0E0',
+    '#90A4AE', '#80DEEA', '#E6EE9C', '#EF9A9A',
 ];
-const COLOR_STORAGE_KEY = 'loramap.deviceColors.v1';
 const QUICK_RANGE_DAYS = {
     day: 1,
     week: 7,
@@ -17,17 +24,23 @@ const QUICK_RANGE_DAYS = {
     year: 365,
 };
 let activeQuickRange = null;
+let customDeviceColors = {};
+
+async function loadCustomColors() {
+    try {
+        const resp = await fetch('/api/device_colors');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        customDeviceColors = data && typeof data.colors === 'object' ? data.colors : {};
+    } catch {
+        customDeviceColors = {};
+    }
+}
 
 function getDeviceColor(deviceId) {
-    try {
-        const raw = localStorage.getItem(COLOR_STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : {};
-        const custom = parsed && typeof parsed === 'object' ? parsed[deviceId] : null;
-        const normalized = typeof custom === 'string' ? custom.trim().toUpperCase() : null;
-        if (normalized && DEVICE_COLORS.includes(normalized)) return normalized;
-    } catch {
-        // ignore malformed storage and fallback to deterministic color
-    }
+    const custom = customDeviceColors[deviceId];
+    const normalized = typeof custom === 'string' ? custom.trim().toUpperCase() : null;
+    if (normalized && DEVICE_COLORS.includes(normalized)) return normalized;
 
     const key = String(deviceId || '');
     let hash = 0;
@@ -38,6 +51,7 @@ function getDeviceColor(deviceId) {
 }
 
 async function loadData() {
+    await loadCustomColors();
     // Populate device select
     const devResp = await fetch('/api/devices');
     if (devResp.ok) {

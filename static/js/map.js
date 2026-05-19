@@ -33,8 +33,15 @@ const DEVICE_COLORS = [
     '#26C6DA', // cyan 2
     '#D4E157', // lime 2
     '#EF5350', // red 2
+    '#C62828', '#1565C0', '#2E7D32', '#E65100',
+    '#6A1B9A', '#00838F', '#EF6C00', '#AD1457',
+    '#4E342E', '#37474F', '#558B2F', '#283593',
+    '#00695C', '#9E9D24', '#4527A0', '#F9A825',
+    '#A1887F', '#7986CB', '#4DB6AC', '#AED581',
+    '#FF8A65', '#F48FB1', '#CE93D8', '#81D4FA',
+    '#A5D6A7', '#FFE082', '#FFCC80', '#E0E0E0',
+    '#90A4AE', '#80DEEA', '#E6EE9C', '#EF9A9A',
 ];
-const COLOR_STORAGE_KEY = 'loramap.deviceColors.v1';
 const QUICK_RANGE_DAYS = {
     day: 1,
     week: 7,
@@ -46,6 +53,7 @@ let map;
 let markers = {};       // device_id -> [google.maps.Marker]
 let polylines = {};     // device_id -> google.maps.Polyline
 let deviceColors = {};
+let customDeviceColors = {};
 let allPositions = [];
 let viewMode = 'all';
 let enabledDevices = new Set();
@@ -62,23 +70,29 @@ async function initMap() {
         fullscreenControl: true,
     });
 
+    await loadCustomColors();
     setQuickRange('week', false);
     updateLastUpdateUtc();
     loadPositions();
 }
 
-function getDeviceColor(deviceId) {
+async function loadCustomColors() {
     try {
-        const raw = localStorage.getItem(COLOR_STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : {};
-        const custom = parsed && typeof parsed === 'object' ? parsed[deviceId] : null;
-        const normalized = typeof custom === 'string' ? custom.trim().toUpperCase() : null;
-        if (normalized && DEVICE_COLORS.includes(normalized)) {
-            deviceColors[deviceId] = normalized;
-            return normalized;
-        }
+        const resp = await fetch('/api/device_colors');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        customDeviceColors = data && typeof data.colors === 'object' ? data.colors : {};
     } catch {
-        // ignore malformed storage and fallback to deterministic color
+        customDeviceColors = {};
+    }
+}
+
+function getDeviceColor(deviceId) {
+    const custom = customDeviceColors[deviceId];
+    const normalized = typeof custom === 'string' ? custom.trim().toUpperCase() : null;
+    if (normalized && DEVICE_COLORS.includes(normalized)) {
+        deviceColors[deviceId] = normalized;
+        return normalized;
     }
 
     if (!deviceColors[deviceId]) {

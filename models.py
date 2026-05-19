@@ -82,3 +82,18 @@ class UplinkMessage(db.Model):
     __table_args__ = (
         db.UniqueConstraint('device_id', 'received_at', name='uq_device_received'),
     )
+
+
+class DeviceColorPreference(db.Model):
+    __tablename__ = 'device_color_preferences'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    device_id = db.Column(db.String(100), nullable=False, index=True)
+    color = db.Column(db.String(7), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'device_id', name='uq_device_color_preferences_user_device'),
+    )

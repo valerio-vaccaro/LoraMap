@@ -9,8 +9,15 @@ const DEVICE_COLORS = [
     '#FF7043', '#EC407A', '#AB47BC', '#29B6F6',
     '#66BB6A', '#FFCA28', '#FFA726', '#BDBDBD',
     '#78909C', '#26C6DA', '#D4E157', '#EF5350',
+    '#C62828', '#1565C0', '#2E7D32', '#E65100',
+    '#6A1B9A', '#00838F', '#EF6C00', '#AD1457',
+    '#4E342E', '#37474F', '#558B2F', '#283593',
+    '#00695C', '#9E9D24', '#4527A0', '#F9A825',
+    '#A1887F', '#7986CB', '#4DB6AC', '#AED581',
+    '#FF8A65', '#F48FB1', '#CE93D8', '#81D4FA',
+    '#A5D6A7', '#FFE082', '#FFCC80', '#E0E0E0',
+    '#90A4AE', '#80DEEA', '#E6EE9C', '#EF9A9A',
 ];
-const COLOR_STORAGE_KEY = 'loramap.deviceColors.v1';
 
 // metric -> { chart instance, label, unit }
 const CHART_DEFS = {
@@ -27,19 +34,19 @@ let deviceList = [];
 let customDeviceColors = {};
 
 function loadCustomColors() {
+    customDeviceColors = {};
+}
+
+async function fetchCustomColors() {
     try {
-        const raw = localStorage.getItem(COLOR_STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : {};
-        if (parsed && typeof parsed === 'object') {
-            customDeviceColors = parsed;
-        }
+        const resp = await fetch('/api/device_colors');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const colors = data && typeof data.colors === 'object' ? data.colors : {};
+        customDeviceColors = colors || {};
     } catch {
         customDeviceColors = {};
     }
-}
-
-function saveCustomColors() {
-    localStorage.setItem(COLOR_STORAGE_KEY, JSON.stringify(customDeviceColors));
 }
 
 function normalizeColor(color) {
@@ -66,6 +73,7 @@ function getDeviceColor(deviceId) {
 
 async function loadDashboard() {
     loadCustomColors();
+    await fetchCustomColors();
     const resp = await fetch('/api/devices');
     if (!resp.ok) return;
     const data = await resp.json();
@@ -170,8 +178,13 @@ async function setDeviceColor(encodedDeviceId, color) {
     const deviceId = decodeURIComponent(encodedDeviceId);
     const normalized = normalizeColor(color);
     if (!normalized) return;
+    const resp = await fetch('/api/device_colors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_id: deviceId, color: normalized }),
+    });
+    if (!resp.ok) return;
     customDeviceColors[deviceId] = normalized;
-    saveCustomColors();
     renderDeviceTable(deviceList);
     for (const metric of Object.keys(CHART_DEFS)) {
         await updateChart(metric);

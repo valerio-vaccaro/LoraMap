@@ -1,13 +1,14 @@
 import subprocess
+from pathlib import Path
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file
 from flask_migrate import Migrate
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from sqlalchemy import func
 import requests as http_requests
 
 from config import Config
-from models import db, User, DataSource, UplinkMessage
+from models import db, User, DataSource, UplinkMessage, DeviceColorPreference
 from utils import parse_and_store, parse_lines, parse_datetime
 from decoders.registry import DECODER_CHOICES
 
@@ -26,12 +27,23 @@ def _get_version() -> str:
 
 
 APP_VERSION = _get_version()
+DEVICE_COLORS = {
+    '#E53935', '#1E88E5', '#43A047', '#F4511E', '#8E24AA', '#00ACC1', '#FB8C00', '#D81B60',
+    '#6D4C41', '#546E7A', '#7CB342', '#3949AB', '#00897B', '#C0CA33', '#5E35B1', '#FDD835',
+    '#8D6E63', '#5C6BC0', '#26A69A', '#9CCC65', '#FF7043', '#EC407A', '#AB47BC', '#29B6F6',
+    '#66BB6A', '#FFCA28', '#FFA726', '#BDBDBD', '#78909C', '#26C6DA', '#D4E157', '#EF5350',
+    '#C62828', '#1565C0', '#2E7D32', '#E65100', '#6A1B9A', '#00838F', '#EF6C00', '#AD1457',
+    '#4E342E', '#37474F', '#558B2F', '#283593', '#00695C', '#9E9D24', '#4527A0', '#F9A825',
+    '#A1887F', '#7986CB', '#4DB6AC', '#AED581', '#FF8A65', '#F48FB1', '#CE93D8', '#81D4FA',
+    '#A5D6A7', '#FFE082', '#FFCC80', '#E0E0E0', '#90A4AE', '#80DEEA', '#E6EE9C', '#EF9A9A',
+}
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
 db.init_app(app)
 app.jinja_env.globals['app_version'] = APP_VERSION
+OPENAPI_PATH = Path(__file__).resolve().parent / 'docs' / 'openapi.yaml'
 
 
 @app.context_processor
@@ -138,6 +150,18 @@ def dashboard():
 @login_required
 def data_view():
     return render_template('data.html')
+
+
+@app.route('/api-docs')
+@login_required
+def api_docs():
+    return render_template('api_docs.html')
+
+
+@app.route('/openapi.yaml')
+@login_required
+def openapi_spec():
+    return send_file(OPENAPI_PATH, mimetype='application/yaml')
 
 
 @app.route('/profile', methods=['GET', 'POST'])
@@ -386,6 +410,43 @@ def api_devices():
         })
 
     return jsonify({'devices': result})
+
+
+@app.route('/api/device_colors', methods=['GET'])
+@login_required
+def api_device_colors():
+    rows = DeviceColorPreference.query.filter_by(user_id=current_user.id).all()
+    return jsonify({'colors': {r.device_id: r.color for r in rows}})
+
+
+@app.route('/api/device_colors', methods=['POST'])
+@login_required
+def api_set_device_color():
+    payload = request.get_json(silent=True) or {}
+    device_id = str(payload.get('device_id', '')).strip()
+    color = str(payload.get('color', '')).strip().upper()
+
+    if not device_id:
+        return jsonify({'error': 'device_id is required'}), 400
+    if color not in DEVICE_COLORS:
+        return jsonify({'error': 'Invalid color'}), 400
+
+    pref = DeviceColorPreference.query.filter_by(
+        user_id=current_user.id,
+        device_id=device_id,
+    ).first()
+    if pref:
+        pref.color = color
+    else:
+        pref = DeviceColorPreference(
+            user_id=current_user.id,
+            device_id=device_id,
+            color=color,
+        )
+        db.session.add(pref)
+    db.session.commit()
+
+    return jsonify({'ok': True, 'device_id': device_id, 'color': color})
 
 
 @app.route('/api/chart_data')

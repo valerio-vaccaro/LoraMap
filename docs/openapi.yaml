@@ -1,0 +1,449 @@
+openapi: 3.0.3
+info:
+  title: LoraMap API
+  version: 1.0.0
+  description: |
+    API documentation for LoraMap.
+
+    Note: most endpoints require an authenticated Flask session (cookie-based login).
+servers:
+  - url: /
+security:
+  - cookieAuth: []
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+  parameters:
+    DevicesParam:
+      name: devices
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Comma-separated list of device IDs.
+    FromParam:
+      name: from
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Start datetime string. Accepted by backend datetime parser.
+    ToParam:
+      name: to
+      in: query
+      required: false
+      schema:
+        type: string
+      description: End datetime string. Accepted by backend datetime parser.
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+    StatsResponse:
+      type: object
+      properties:
+        total_messages:
+          type: integer
+        total_devices:
+          type: integer
+        last_week:
+          type: integer
+        last_month:
+          type: integer
+        active_devices:
+          type: integer
+        last_received_at:
+          type: string
+          nullable: true
+          format: date-time
+    Position:
+      type: object
+      properties:
+        id:
+          type: integer
+        device_id:
+          type: string
+        received_at:
+          type: string
+          format: date-time
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        battery:
+          type: number
+          nullable: true
+        rssi:
+          type: integer
+          nullable: true
+        channel_rssi:
+          type: integer
+          nullable: true
+        snr:
+          type: number
+          nullable: true
+        channel_index:
+          type: integer
+          nullable: true
+        gateway_count:
+          type: integer
+          nullable: true
+        spreading_factor:
+          type: integer
+          nullable: true
+        bandwidth:
+          type: integer
+          nullable: true
+        coding_rate:
+          type: string
+          nullable: true
+        consumed_airtime:
+          type: string
+          nullable: true
+        positioning_status:
+          type: string
+          nullable: true
+        f_cnt:
+          type: integer
+          nullable: true
+    PositionsResponse:
+      type: object
+      properties:
+        positions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Position'
+        device_ids:
+          type: array
+          items:
+            type: string
+    DeviceSummary:
+      type: object
+      properties:
+        device_id:
+          type: string
+        last_latitude:
+          type: number
+          nullable: true
+        last_longitude:
+          type: number
+          nullable: true
+        last_gps_at:
+          type: string
+          nullable: true
+          format: date-time
+        last_battery:
+          type: number
+          nullable: true
+        last_rssi:
+          type: integer
+          nullable: true
+        last_channel_rssi:
+          type: integer
+          nullable: true
+        last_snr:
+          type: number
+          nullable: true
+        last_channel_index:
+          type: integer
+          nullable: true
+        last_gateway_count:
+          type: integer
+          nullable: true
+        last_spreading_factor:
+          type: integer
+          nullable: true
+        last_bandwidth:
+          type: integer
+          nullable: true
+        last_coding_rate:
+          type: string
+          nullable: true
+        last_consumed_airtime:
+          type: string
+          nullable: true
+        last_received_at:
+          type: string
+          nullable: true
+          format: date-time
+        seconds_ago:
+          type: integer
+          nullable: true
+        message_count:
+          type: integer
+    DevicesResponse:
+      type: object
+      properties:
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceSummary'
+    DeviceColorsResponse:
+      type: object
+      properties:
+        colors:
+          type: object
+          additionalProperties:
+            type: string
+            pattern: '^#[0-9A-F]{6}$'
+    SetDeviceColorRequest:
+      type: object
+      required: [device_id, color]
+      properties:
+        device_id:
+          type: string
+        color:
+          type: string
+          pattern: '^#[0-9A-F]{6}$'
+    SetDeviceColorResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        device_id:
+          type: string
+        color:
+          type: string
+    ChartPoint:
+      type: object
+      properties:
+        device_id:
+          type: string
+        received_at:
+          type: string
+          format: date-time
+        battery:
+          type: number
+          nullable: true
+        rssi:
+          type: integer
+          nullable: true
+        channel_rssi:
+          type: integer
+          nullable: true
+        snr:
+          type: number
+          nullable: true
+        gateway_count:
+          type: integer
+          nullable: true
+        channel_index:
+          type: integer
+          nullable: true
+    ChartDataResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChartPoint'
+    MessagesResponse:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Position'
+    MessagesRangeResponse:
+      type: object
+      properties:
+        min:
+          type: string
+          nullable: true
+          format: date-time
+        max:
+          type: string
+          nullable: true
+          format: date-time
+    FetchAllResponse:
+      type: object
+      properties:
+        inserted:
+          type: integer
+        skipped:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
+paths:
+  /api/stats:
+    get:
+      summary: Get global stats
+      security: []
+      responses:
+        '200':
+          description: Stats payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+
+  /api/positions:
+    get:
+      summary: Get positions
+      parameters:
+        - $ref: '#/components/parameters/DevicesParam'
+        - $ref: '#/components/parameters/FromParam'
+        - $ref: '#/components/parameters/ToParam'
+        - name: last_only
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Return only the latest point per device.
+      responses:
+        '200':
+          description: Positions payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PositionsResponse'
+        '401':
+          description: Unauthorized
+
+  /api/devices:
+    get:
+      summary: Get device summaries
+      responses:
+        '200':
+          description: Device list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevicesResponse'
+        '401':
+          description: Unauthorized
+
+  /api/device_colors:
+    get:
+      summary: Get saved device colors for current user
+      responses:
+        '200':
+          description: Map of device_id to color
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceColorsResponse'
+        '401':
+          description: Unauthorized
+    post:
+      summary: Save device color for current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetDeviceColorRequest'
+      responses:
+        '200':
+          description: Color saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetDeviceColorResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+
+  /api/chart_data:
+    get:
+      summary: Get chart points for one metric
+      parameters:
+        - name: device_id
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: metric
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [battery, rssi, channel_rssi, snr, gateway_count, channel_index]
+            default: battery
+        - $ref: '#/components/parameters/FromParam'
+        - $ref: '#/components/parameters/ToParam'
+      responses:
+        '200':
+          description: Chart data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChartDataResponse'
+        '400':
+          description: Invalid metric
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+
+  /api/messages/range:
+    get:
+      summary: Get min/max message timestamps
+      responses:
+        '200':
+          description: Range payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagesRangeResponse'
+        '401':
+          description: Unauthorized
+
+  /api/messages:
+    get:
+      summary: Get messages
+      parameters:
+        - $ref: '#/components/parameters/DevicesParam'
+        - $ref: '#/components/parameters/FromParam'
+        - $ref: '#/components/parameters/ToParam'
+      responses:
+        '200':
+          description: Messages payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagesResponse'
+        '401':
+          description: Unauthorized
+
+  /api/fetch_all:
+    post:
+      summary: Trigger fetch from all enabled data sources for current user
+      responses:
+        '200':
+          description: Fetch completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FetchAllResponse'
+        '400':
+          description: No enabled data sources
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      inserted:
+                        type: integer
+                      skipped:
+                        type: integer
+        '401':
+          description: Unauthorized
