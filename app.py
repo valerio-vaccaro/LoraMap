@@ -295,12 +295,12 @@ def api_stats():
 
     total_messages  = UplinkMessage.query.count()
     total_devices   = db.session.query(func.count(UplinkMessage.device_id.distinct())).scalar()
-    last_week       = UplinkMessage.query.filter(UplinkMessage.received_at >= week_ago).count()
-    last_month      = UplinkMessage.query.filter(UplinkMessage.received_at >= month_ago).count()
+    last_week       = UplinkMessage.query.filter(UplinkMessage.real_timestamp >= week_ago).count()
+    last_month      = UplinkMessage.query.filter(UplinkMessage.real_timestamp >= month_ago).count()
     active_devices  = db.session.query(func.count(UplinkMessage.device_id.distinct())).filter(
-        UplinkMessage.received_at >= month_ago
+        UplinkMessage.real_timestamp >= month_ago
     ).scalar()
-    last_msg = UplinkMessage.query.order_by(UplinkMessage.received_at.desc()).first()
+    last_msg = UplinkMessage.query.order_by(UplinkMessage.real_timestamp.desc()).first()
 
     return jsonify({
         'total_messages':  total_messages,
@@ -309,6 +309,7 @@ def api_stats():
         'last_month':      last_month,
         'active_devices':  active_devices,
         'last_received_at': last_msg.received_at.isoformat() if last_msg else None,
+        'last_real_timestamp': last_msg.real_timestamp.isoformat() if last_msg else None,
     })
 
 
@@ -335,14 +336,14 @@ def api_positions():
     if from_time:
         dt = parse_datetime(from_time)
         if dt:
-            query = query.filter(UplinkMessage.received_at >= dt)
+            query = query.filter(UplinkMessage.real_timestamp >= dt)
 
     if to_time:
         dt = parse_datetime(to_time)
         if dt:
-            query = query.filter(UplinkMessage.received_at <= dt)
+            query = query.filter(UplinkMessage.real_timestamp <= dt)
 
-    query = query.order_by(UplinkMessage.device_id, UplinkMessage.received_at.asc())
+    query = query.order_by(UplinkMessage.device_id, UplinkMessage.real_timestamp.asc())
     messages = query.all()
 
     if last_only:
@@ -375,25 +376,30 @@ def api_devices():
         last_gps = base.filter(
             UplinkMessage.latitude.isnot(None),
             UplinkMessage.longitude.isnot(None),
-        ).order_by(UplinkMessage.received_at.desc()).first()
+        ).order_by(UplinkMessage.real_timestamp.desc()).first()
 
-        last_msg = base.order_by(UplinkMessage.received_at.desc()).first()
+        last_msg = base.order_by(UplinkMessage.real_timestamp.desc()).first()
 
         last_battery = base.filter(
             UplinkMessage.battery.isnot(None),
-        ).order_by(UplinkMessage.received_at.desc()).first()
+        ).order_by(UplinkMessage.real_timestamp.desc()).first()
 
         count = base.count()
 
         seconds_ago = None
         if last_msg:
-            seconds_ago = int((now - last_msg.received_at).total_seconds())
+            seconds_ago = int((now - last_msg.real_timestamp).total_seconds())
+
+        gps_seconds_ago = None
+        if last_gps:
+            gps_seconds_ago = int((now - last_gps.real_timestamp).total_seconds())
 
         result.append({
             'device_id': device_id,
             'last_latitude': last_gps.latitude if last_gps else None,
             'last_longitude': last_gps.longitude if last_gps else None,
-            'last_gps_at': last_gps.received_at.isoformat() if last_gps else None,
+            'last_gps_at': last_gps.real_timestamp.isoformat() if last_gps else None,
+            'last_gps_received_at': last_gps.received_at.isoformat() if last_gps else None,
             'last_battery': last_battery.battery if last_battery else None,
             'last_rssi': last_msg.rssi if last_msg else None,
             'last_channel_rssi': last_msg.channel_rssi if last_msg else None,
@@ -404,8 +410,10 @@ def api_devices():
             'last_bandwidth': last_msg.bandwidth if last_msg else None,
             'last_coding_rate': last_msg.coding_rate if last_msg else None,
             'last_consumed_airtime': last_msg.consumed_airtime if last_msg else None,
+            'last_real_timestamp': last_msg.real_timestamp.isoformat() if last_msg else None,
             'last_received_at': last_msg.received_at.isoformat() if last_msg else None,
             'seconds_ago': seconds_ago,
+            'gps_seconds_ago': gps_seconds_ago,
             'message_count': count,
         })
 
@@ -473,19 +481,20 @@ def api_chart_data():
     if from_time:
         dt = parse_datetime(from_time)
         if dt:
-            query = query.filter(UplinkMessage.received_at >= dt)
+            query = query.filter(UplinkMessage.real_timestamp >= dt)
     if to_time:
         dt = parse_datetime(to_time)
         if dt:
-            query = query.filter(UplinkMessage.received_at <= dt)
+            query = query.filter(UplinkMessage.real_timestamp <= dt)
 
-    query = query.order_by(UplinkMessage.received_at.asc())
+    query = query.order_by(UplinkMessage.real_timestamp.asc())
     messages = query.all()
 
     return jsonify({
         'data': [
             {
                 'device_id': m.device_id,
+                'real_timestamp': m.real_timestamp.isoformat(),
                 'received_at': m.received_at.isoformat(),
                 metric: getattr(m, metric),
             }
@@ -499,8 +508,8 @@ def api_chart_data():
 def api_messages_range():
     ds_ids = _user_ds_ids()
     result = db.session.query(
-        func.min(UplinkMessage.received_at),
-        func.max(UplinkMessage.received_at),
+        func.min(UplinkMessage.real_timestamp),
+        func.max(UplinkMessage.real_timestamp),
     ).filter(UplinkMessage.datasource_id.in_(ds_ids)).one()
     min_dt, max_dt = result
     return jsonify({
@@ -527,14 +536,14 @@ def api_messages():
     if from_time:
         dt = parse_datetime(from_time)
         if dt:
-            query = query.filter(UplinkMessage.received_at >= dt)
+            query = query.filter(UplinkMessage.real_timestamp >= dt)
 
     if to_time:
         dt = parse_datetime(to_time)
         if dt:
-            query = query.filter(UplinkMessage.received_at <= dt)
+            query = query.filter(UplinkMessage.real_timestamp <= dt)
 
-    query = query.order_by(UplinkMessage.received_at.desc())
+    query = query.order_by(UplinkMessage.real_timestamp.desc())
     messages = query.all()
 
     return jsonify({'messages': [_msg_to_dict(m) for m in messages]})
@@ -604,6 +613,7 @@ def _msg_to_dict(m):
         'id': m.id,
         'device_id': m.device_id,
         'received_at': m.received_at.isoformat(),
+        'real_timestamp': m.real_timestamp.isoformat(),
         'latitude': m.latitude,
         'longitude': m.longitude,
         'battery': m.battery,

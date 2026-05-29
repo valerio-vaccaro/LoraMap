@@ -22,6 +22,7 @@ class BaseDecoder(ABC):
         Returns a dict with at minimum:
             device_id   (str)
             received_at (datetime)
+            real_timestamp (datetime, optional; defaults to received_at)
 
         And optionally any of:
             latitude, longitude, battery, positioning_status,

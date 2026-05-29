@@ -108,35 +108,42 @@ function batteryBadge(battery) {
     return `<span class="ago-badge ${cls}">${battery} %</span>`;
 }
 
+function fmt(iso) {
+    return iso ? new Date(iso).toLocaleString() : '—';
+}
+
+function dualTime(realIso, receivedIso) {
+    if (!realIso && !receivedIso) return '—';
+    return `<span>Real: ${fmt(realIso)}</span><br><span class="muted small">Received: ${fmt(receivedIso)}</span>`;
+}
+
 function renderDeviceTable(devices) {
     const tbody = document.getElementById('device-table-body');
     if (!devices.length) {
-        tbody.innerHTML = '<tr><td colspan="17" class="muted">No data yet. Add a data source and fetch.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="15" class="muted">No data yet. Add a data source and fetch.</td></tr>';
         return;
     }
 
     tbody.innerHTML = devices.map(d => {
         const pos = (d.last_latitude != null && d.last_longitude != null)
-            ? `${d.last_latitude.toFixed(5)}, ${d.last_longitude.toFixed(5)}`
+            ? `${d.last_latitude.toFixed(5)}, ${d.last_longitude.toFixed(5)}
+               <a class="btn btn-ghost btn-sm" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${d.last_latitude},${d.last_longitude}`)}" target="_blank" rel="noopener">Map</a>`
             : '—';
 
-        const lastSeen = d.last_received_at
-            ? new Date(d.last_received_at).toLocaleString()
-            : '—';
-
-        const lastGps = d.last_gps_at
-            ? new Date(d.last_gps_at).toLocaleString()
-            : '—';
+        const lastSeen = dualTime(d.last_real_timestamp, d.last_received_at);
+        const lastGps = dualTime(d.last_gps_at, d.last_gps_received_at);
 
         const agoClass = d.seconds_ago != null && d.seconds_ago > 7200 ? 'ago-old' :
                          d.seconds_ago != null && d.seconds_ago > 1800 ? 'ago-warn' : 'ago-ok';
+        const gpsAgoClass = d.gps_seconds_ago != null && d.gps_seconds_ago > 7200 ? 'ago-old' :
+                            d.gps_seconds_ago != null && d.gps_seconds_ago > 1800 ? 'ago-warn' : 'ago-ok';
 
         const color = getDeviceColor(d.device_id);
         const encodedId = encodeURIComponent(d.device_id);
 
         return `<tr>
-            <td><strong>${d.device_id}</strong></td>
             <td>
+                <strong>${d.device_id}</strong>
                 <details class="color-picker">
                     <summary>
                         <span class="device-color-dot" style="background:${color}"></span>
@@ -157,12 +164,11 @@ function renderDeviceTable(devices) {
             </td>
             <td class="mono col-hide-mobile">${pos}</td>
             <td class="mono small col-hide-mobile">${lastGps}</td>
+            <td class="col-hide-mobile"><span class="ago-badge ${gpsAgoClass}">${formatTimeAgo(d.gps_seconds_ago)}</span></td>
             <td>${batteryBadge(d.last_battery)}</td>
             <td>${v(d.last_rssi, ' dBm')}</td>
-            <td class="col-hide-mobile">${v(d.last_channel_rssi, ' dBm')}</td>
             <td class="col-hide-mobile">${v(d.last_snr, ' dB')}</td>
             <td class="col-hide-mobile">${v(d.last_channel_index)}</td>
-            <td class="col-hide-mobile">${v(d.last_gateway_count)}</td>
             <td class="col-hide-mobile">${d.last_spreading_factor != null ? 'SF' + d.last_spreading_factor : '—'}</td>
             <td class="col-hide-mobile">${d.last_bandwidth != null ? d.last_bandwidth / 1000 + ' kHz' : '—'}</td>
             <td class="col-hide-mobile">${v(d.last_coding_rate)}</td>
@@ -237,7 +243,7 @@ async function updateChart(metric) {
             const color = getDeviceColor(id);
             datasets.push({
                 label: id,
-                data: data.data.map(d => ({ x: new Date(d.received_at), y: d[metric] })),
+                data: data.data.map(d => ({ x: new Date(d.real_timestamp), y: d[metric] })),
                 borderColor: color,
                 backgroundColor: color + '20',
                 borderWidth: 2,

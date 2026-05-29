@@ -10,6 +10,7 @@ Measurement IDs used:
     3576 → Positioning Status
 """
 from typing import Optional
+from datetime import datetime
 from .ttn_base import TTNBaseDecoder
 
 
@@ -28,12 +29,14 @@ class SensecapT1000ADecoder(TTNBaseDecoder):
         if decoded.get('err', 0) != 0:
             return None
 
-        longitude = latitude = battery = positioning_status = None
+        longitude = latitude = battery = positioning_status = real_timestamp = None
 
         for group in decoded.get('messages', []):
             if not isinstance(group, list):
                 continue
             for msg in group:
+                if real_timestamp is None:
+                    real_timestamp = self._parse_message_timestamp(msg.get('timestamp'))
                 mid = str(msg.get('measurementId', ''))
                 val = msg.get('measurementValue')
                 if val is None:
@@ -61,4 +64,23 @@ class SensecapT1000ADecoder(TTNBaseDecoder):
             'latitude':           latitude,
             'battery':            battery,
             'positioning_status': positioning_status,
+            'real_timestamp':     real_timestamp,
         }
+
+    @staticmethod
+    def _parse_message_timestamp(value):
+        if value is None:
+            return None
+        try:
+            timestamp = float(value)
+        except (TypeError, ValueError):
+            return None
+
+        # SenseCAP decoded message timestamps are milliseconds since Unix epoch.
+        if timestamp > 10_000_000_000:
+            timestamp /= 1000
+
+        try:
+            return datetime.utcfromtimestamp(timestamp)
+        except (OverflowError, OSError, ValueError):
+            return None

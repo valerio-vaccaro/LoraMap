@@ -64,6 +64,7 @@ class UplinkMessage(db.Model):
     datasource_id = db.Column(db.Integer, db.ForeignKey('datasources.id', ondelete='CASCADE'), nullable=True, index=True)
     device_id = db.Column(db.String(100), nullable=False, index=True)
     received_at = db.Column(db.DateTime, nullable=False, index=True)
+    real_timestamp = db.Column(db.DateTime, nullable=False, index=True)
     f_cnt = db.Column(db.Integer)
     longitude = db.Column(db.Float)
     latitude = db.Column(db.Float)

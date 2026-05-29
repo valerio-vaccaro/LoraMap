@@ -66,11 +66,15 @@
         document.getElementById('s-month').textContent      = d.last_month.toLocaleString();
         document.getElementById('s-week').textContent       = d.last_week.toLocaleString();
         document.getElementById('s-active-dev').textContent = d.active_devices.toLocaleString();
-        document.getElementById('s-last').textContent       = d.last_received_at
-            ? new Date(d.last_received_at).toLocaleString(undefined, {
+        const fmt = (iso) => iso
+            ? new Date(iso).toLocaleString(undefined, {
                   month: 'short', day: 'numeric',
                   hour: '2-digit', minute: '2-digit' })
             : '—';
+        document.getElementById('s-last').innerHTML =
+            d.last_real_timestamp
+                ? `${fmt(d.last_real_timestamp)}<br><small>recv ${fmt(d.last_received_at)}</small>`
+                : '—';
     } catch (_) {}
 })();
 </script>

@@ -168,8 +168,8 @@ function renderPositions() {
         const color = getDeviceColor(deviceId);
         markers[deviceId] = [];
 
-        // Sort chronologically
-        positions.sort((a, b) => new Date(a.received_at) - new Date(b.received_at));
+        // Sort chronologically by device timestamp.
+        positions.sort((a, b) => new Date(a.real_timestamp) - new Date(b.real_timestamp));
 
         const toShow = viewMode === 'last'
             ? [positions[positions.length - 1]]
@@ -181,7 +181,7 @@ function renderPositions() {
                 position: latLng,
                 map,
                 icon: getMarkerIcon(color),
-                title: deviceId + ' — ' + formatDateTime(pos.received_at),
+                title: deviceId + ' — ' + formatDateTime(pos.real_timestamp),
             });
             marker.addListener('click', () => showDetailPanel(pos, deviceId));
             markers[deviceId].push(marker);
@@ -355,7 +355,8 @@ function showDetailPanel(pos, deviceId) {
         </div>
         <div class="detail-content">
             <div class="detail-section-label">Position</div>
-            ${row('Time', formatDateTime(pos.received_at))}
+            ${row('Real Time', formatDateTime(pos.real_timestamp))}
+            ${row('Received', formatDateTime(pos.received_at))}
             ${row('Latitude',  pos.latitude  != null ? pos.latitude.toFixed(6)  : null)}
             ${row('Longitude', pos.longitude != null ? pos.longitude.toFixed(6) : null)}
             ${row('Pos. Status', pos.positioning_status)}

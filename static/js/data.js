@@ -167,7 +167,7 @@ function renderTable(messages) {
     count.textContent = messages.length ? `${messages.length} row${messages.length !== 1 ? 's' : ''}` : '';
 
     if (!messages.length) {
-        tbody.innerHTML = '<tr><td colspan="17" class="muted">No messages found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="18" class="muted">No messages found.</td></tr>';
         return;
     }
 
@@ -175,12 +175,16 @@ function renderTable(messages) {
         const time = m.received_at
             ? new Date(m.received_at).toISOString().replace('T', ' ').slice(0, 19)
             : '—';
+        const realTime = m.real_timestamp
+            ? new Date(m.real_timestamp).toISOString().replace('T', ' ').slice(0, 19)
+            : time;
         const color = getDeviceColor(m.device_id);
         const lat = m.latitude  != null ? m.latitude.toFixed(6)  : '—';
         const lon = m.longitude != null ? m.longitude.toFixed(6) : '—';
 
         return `<tr>
             <td class="mono small">${time}</td>
+            <td class="mono small">${realTime}</td>
             <td><strong>${m.device_id}</strong></td>
             <td>
                 <span class="device-color-dot" style="background:${color}"></span>

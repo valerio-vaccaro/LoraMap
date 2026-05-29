@@ -24,17 +24,31 @@ def parse_datetime(dt_str):
 
 
 def parse_and_store(data, datasource_id=None, decoder_type=None):
-    """Decode one raw JSON dict and store as UplinkMessage. Returns 1 if inserted, 0 if skipped."""
+    """Decode one raw JSON dict and store as UplinkMessage. Returns 1 if inserted, 0 if skipped/updated."""
     from decoders.registry import get_decoder
     decoder = get_decoder(decoder_type)
     fields = decoder.decode(data)
     if not fields:
         return 0
 
+    real_timestamp = fields.get('real_timestamp') or fields['received_at']
+    existing = UplinkMessage.query.filter_by(
+        device_id=fields['device_id'],
+        received_at=fields['received_at'],
+    ).first()
+    if existing:
+        existing.real_timestamp = real_timestamp
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        return 0
+
     msg = UplinkMessage(
         datasource_id=datasource_id,
         device_id=fields['device_id'],
         received_at=fields['received_at'],
+        real_timestamp=real_timestamp,
         f_cnt=fields.get('f_cnt'),
         longitude=fields.get('longitude'),
         latitude=fields.get('latitude'),

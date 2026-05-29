@@ -167,10 +167,12 @@ function updateDeviceFilters(positions) {
     container.innerHTML = deviceIds.map(id => {
         const color = getColor(id);
         const checked = enabledDevices.has(id) ? 'checked' : '';
+        const pos = positions.find(p => p.device_id === id);
+        const delay = pos ? ` · ${delayFromRealTimestamp(pos.real_timestamp)}` : '';
         return `<label class="tracker-filter-item">
             <input type="checkbox" ${checked} onchange="toggleTrackerDevice('${encodeURIComponent(id)}', this.checked)">
             <span class="dev-chip-dot" style="background:${color}"></span>
-            <span>${id}</span>
+            <span>${id}${delay}</span>
         </label>`;
     }).join('');
 }
@@ -200,12 +202,15 @@ function showDetail(pos) {
     document.getElementById('tracker-info').innerHTML = `
         <div class="ti-header">
             <span class="ti-badge" style="background:${color}">${pos.device_id}</span>
-            <span class="ti-time">🕐 ${fmt(pos.received_at)}</span>
+            <span class="ti-time">🕐 ${fmt(pos.real_timestamp)}</span>
         </div>
 
         <div class="ti-grid">
             <div class="ti-card">
                 <div class="ti-card-title">📍 Position</div>
+                ${row('', 'Real Time', fmt(pos.real_timestamp))}
+                ${row('', 'Received',  fmt(pos.received_at))}
+                ${row('', 'Delay',     delayFromRealTimestamp(pos.real_timestamp))}
                 ${row('', 'Latitude',  pos.latitude  != null ? pos.latitude.toFixed(6)  : null)}
                 ${row('', 'Longitude', pos.longitude != null ? pos.longitude.toFixed(6) : null)}
                 ${row('', 'Status',    pos.positioning_status)}
@@ -248,11 +253,11 @@ function updateDeviceChips(positions) {
     bar.innerHTML = positions.map(pos => {
         const color = getColor(pos.device_id);
         const bat   = pos.battery != null ? ` · 🔋${pos.battery}%` : '';
-        const ago   = pos.received_at ? ' · ' + timeAgo(pos.received_at) : '';
+        const delay = pos.real_timestamp ? ' · ' + delayFromRealTimestamp(pos.real_timestamp) : '';
         return `<span class="dev-chip" style="border-color:${color};color:${color}"
                       onclick="focusDevice('${pos.device_id}')">
                     <span class="dev-chip-dot" style="background:${color}"></span>
-                    ${pos.device_id}${bat}${ago}
+                    ${pos.device_id}${bat}${delay}
                 </span>`;
     }).join('');
 }
@@ -269,18 +274,34 @@ function focusDevice(deviceId) {
 
 function fmt(iso) {
     if (!iso) return '—';
-    return new Date(iso).toLocaleString(undefined, {
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', second: '2-digit',
-    });
+    const date = parseUtcDate(iso);
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    const h = String(date.getUTCHours()).padStart(2, '0');
+    const min = String(date.getUTCMinutes()).padStart(2, '0');
+    const s = String(date.getUTCSeconds()).padStart(2, '0');
+    return `${y}-${m}-${d} ${h}:${min}:${s} UTC`;
 }
 
-function timeAgo(iso) {
-    const secs = Math.floor((Date.now() - new Date(iso)) / 1000);
-    if (secs < 60)   return secs + 's ago';
-    if (secs < 3600) return Math.floor(secs / 60) + 'm ago';
-    if (secs < 86400) return Math.floor(secs / 3600) + 'h ago';
-    return Math.floor(secs / 86400) + 'd ago';
+function parseUtcDate(iso) {
+    if (!iso) return null;
+    return new Date(/[zZ]|[+-]\d{2}:\d{2}$/.test(iso) ? iso : iso + 'Z');
+}
+
+function delayFromRealTimestamp(iso) {
+    if (!iso) return null;
+    const minutes = Math.max(0, (Date.now() - parseUtcDate(iso).getTime()) / 60000);
+    if (minutes < 60) {
+        const value = Math.max(1, Math.floor(minutes));
+        return value + 'm delay';
+    }
+    const hours = minutes / 60;
+    if (hours < 48) {
+        const value = Math.max(1, Math.floor(hours));
+        return value + 'h delay';
+    }
+    return Math.floor(hours / 24) + 'd delay';
 }
 async function loadCustomColors() {
     try {

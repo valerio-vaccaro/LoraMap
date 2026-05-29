@@ -61,6 +61,10 @@ components:
           type: string
           nullable: true
           format: date-time
+        last_real_timestamp:
+          type: string
+          nullable: true
+          format: date-time
     Position:
       type: object
       properties:
@@ -69,6 +73,9 @@ components:
         device_id:
           type: string
         received_at:
+          type: string
+          format: date-time
+        real_timestamp:
           type: string
           format: date-time
         latitude:
@@ -139,6 +146,10 @@ components:
           type: string
           nullable: true
           format: date-time
+        last_gps_received_at:
+          type: string
+          nullable: true
+          format: date-time
         last_battery:
           type: number
           nullable: true
@@ -173,7 +184,14 @@ components:
           type: string
           nullable: true
           format: date-time
+        last_real_timestamp:
+          type: string
+          nullable: true
+          format: date-time
         seconds_ago:
+          type: integer
+          nullable: true
+        gps_seconds_ago:
           type: integer
           nullable: true
         message_count:
@@ -217,6 +235,9 @@ components:
         device_id:
           type: string
         received_at:
+          type: string
+          format: date-time
+        real_timestamp:
           type: string
           format: date-time
         battery:
