@@ -5,13 +5,19 @@
 {% block content %}
 <div class="map-layout">
     <!-- Mobile sidebar toggle -->
-    <button class="sidebar-fab" id="sidebar-fab" onclick="toggleSidebar()" aria-label="Filters">
-        ☰
+    <button class="sidebar-fab" id="sidebar-fab" type="button"
+            onclick="toggleSidebar()" aria-controls="map-sidebar" aria-expanded="false">
+        <span aria-hidden="true">☰</span>
+        <span>Filters</span>
     </button>
-    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebar()"></div>
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
 
     <!-- Sidebar -->
     <aside class="sidebar" id="map-sidebar">
+        <div class="sidebar-mobile-header">
+            <strong>Map Controls</strong>
+            <button class="close-btn" type="button" onclick="closeSidebar()" aria-label="Close map controls">✕</button>
+        </div>
         <div class="sidebar-section">
             <h3 class="sidebar-title">View Mode</h3>
             <div class="radio-group">
@@ -86,11 +92,26 @@
 </script>
 {% endif %}
 <script>
-function toggleSidebar() {
+function setSidebarOpen(open) {
     const sidebar  = document.getElementById('map-sidebar');
     const backdrop = document.getElementById('sidebar-backdrop');
-    const open = sidebar.classList.toggle('sidebar-open');
+    const button = document.getElementById('sidebar-fab');
+    sidebar.classList.toggle('sidebar-open', open);
     backdrop.classList.toggle('backdrop-visible', open);
+    button.setAttribute('aria-expanded', String(open));
 }
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('map-sidebar');
+    setSidebarOpen(!sidebar.classList.contains('sidebar-open'));
+}
+
+function closeSidebar() {
+    setSidebarOpen(false);
+}
+
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeSidebar();
+});
 </script>
 {% endblock %}

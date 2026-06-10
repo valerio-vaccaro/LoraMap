@@ -201,10 +201,33 @@ function dualTime(realIso, receivedIso) {
     return `<span>Real: ${fmt(realIso)}</span><br><span class="muted small">Received: ${fmt(receivedIso)}</span>`;
 }
 
+function renderColorPicker(deviceId, color) {
+    const encodedId = encodeURIComponent(deviceId);
+    return `<details class="color-picker">
+        <summary>
+            <span class="device-color-dot" style="background:${color}"></span>
+            <span class="mono small">${color}</span>
+        </summary>
+        <div class="color-grid">
+            ${DEVICE_COLORS.map(c => `
+                <button
+                    type="button"
+                    class="color-chip ${c === color ? 'selected' : ''}"
+                    title="${c}"
+                    aria-label="Set color ${c}"
+                    style="background:${c}"
+                    onclick="setDeviceColor('${encodedId}', '${c}')"></button>
+            `).join('')}
+        </div>
+    </details>`;
+}
+
 function renderDeviceTable(devices) {
     const tbody = document.getElementById('device-table-body');
+    const cards = document.getElementById('device-summary-cards');
     if (!devices.length) {
         tbody.innerHTML = '<tr><td colspan="15" class="muted">No data yet. Add a data source and fetch.</td></tr>';
+        cards.innerHTML = '<p class="muted">No data yet. Add a data source and fetch.</p>';
         return;
     }
 
@@ -223,28 +246,11 @@ function renderDeviceTable(devices) {
                             d.gps_seconds_ago != null && d.gps_seconds_ago > 1800 ? 'ago-warn' : 'ago-ok';
 
         const color = getDeviceColor(d.device_id);
-        const encodedId = encodeURIComponent(d.device_id);
 
         return `<tr>
             <td>
                 <strong>${d.device_id}</strong>
-                <details class="color-picker">
-                    <summary>
-                        <span class="device-color-dot" style="background:${color}"></span>
-                        <span class="mono small">${color}</span>
-                    </summary>
-                    <div class="color-grid">
-                        ${DEVICE_COLORS.map(c => `
-                            <button
-                                type="button"
-                                class="color-chip ${c === color ? 'selected' : ''}"
-                                title="${c}"
-                                aria-label="Set color ${c}"
-                                style="background:${c}"
-                                onclick="setDeviceColor('${encodedId}', '${c}')"></button>
-                        `).join('')}
-                    </div>
-                </details>
+                ${renderColorPicker(d.device_id, color)}
             </td>
             <td class="mono col-hide-mobile">${pos}</td>
             <td class="mono small col-hide-mobile">${lastGps}</td>
@@ -261,6 +267,55 @@ function renderDeviceTable(devices) {
             <td><span class="ago-badge ${agoClass}">${formatTimeAgo(d.seconds_ago)}</span></td>
             <td class="col-hide-mobile">${d.message_count}</td>
         </tr>`;
+    }).join('');
+
+    cards.innerHTML = devices.map(d => {
+        const hasPosition = d.last_latitude != null && d.last_longitude != null;
+        const mapUrl = hasPosition
+            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${d.last_latitude},${d.last_longitude}`)}`
+            : null;
+        const agoClass = d.seconds_ago != null && d.seconds_ago > 7200 ? 'ago-old' :
+                         d.seconds_ago != null && d.seconds_ago > 1800 ? 'ago-warn' : 'ago-ok';
+        const gpsAgoClass = d.gps_seconds_ago != null && d.gps_seconds_ago > 7200 ? 'ago-old' :
+                            d.gps_seconds_ago != null && d.gps_seconds_ago > 1800 ? 'ago-warn' : 'ago-ok';
+        const color = getDeviceColor(d.device_id);
+
+        return `<article class="device-summary-card">
+            <div class="device-summary-card-header">
+                <div>
+                    <strong class="device-summary-name">${d.device_id}</strong>
+                    ${renderColorPicker(d.device_id, color)}
+                </div>
+                <span class="ago-badge ${agoClass}">${formatTimeAgo(d.seconds_ago)}</span>
+            </div>
+
+            <div class="device-summary-primary">
+                <div><span>Battery</span><strong>${batteryBadge(d.last_battery)}</strong></div>
+                <div><span>RSSI</span><strong>${v(d.last_rssi, ' dBm')}</strong></div>
+                <div><span>SNR</span><strong>${v(d.last_snr, ' dB')}</strong></div>
+                <div><span>Messages</span><strong>${d.message_count}</strong></div>
+            </div>
+
+            ${mapUrl ? `<a class="btn btn-secondary btn-sm device-map-link" href="${mapUrl}" target="_blank" rel="noopener">
+                View last position on map
+            </a>` : '<p class="muted small">No position available</p>'}
+
+            <details class="device-summary-details">
+                <summary>More details</summary>
+                <div class="device-summary-detail-grid">
+                    <div><span>Last seen</span><strong>${fmt(d.last_real_timestamp)}</strong></div>
+                    <div><span>Received</span><strong>${fmt(d.last_received_at)}</strong></div>
+                    <div><span>GPS age</span><strong><span class="ago-badge ${gpsAgoClass}">${formatTimeAgo(d.gps_seconds_ago)}</span></strong></div>
+                    <div><span>Last GPS</span><strong>${fmt(d.last_gps_at)}</strong></div>
+                    <div><span>Position</span><strong>${hasPosition ? `${d.last_latitude.toFixed(5)}, ${d.last_longitude.toFixed(5)}` : '—'}</strong></div>
+                    <div><span>Channel</span><strong>${v(d.last_channel_index)}</strong></div>
+                    <div><span>Spreading factor</span><strong>${d.last_spreading_factor != null ? 'SF' + d.last_spreading_factor : '—'}</strong></div>
+                    <div><span>Bandwidth</span><strong>${d.last_bandwidth != null ? d.last_bandwidth / 1000 + ' kHz' : '—'}</strong></div>
+                    <div><span>Coding rate</span><strong>${v(d.last_coding_rate)}</strong></div>
+                    <div><span>Airtime</span><strong>${v(d.last_consumed_airtime)}</strong></div>
+                </div>
+            </details>
+        </article>`;
     }).join('');
 }
 
