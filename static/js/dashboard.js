@@ -29,8 +29,17 @@ const CHART_DEFS = {
     channel_index: { label: 'Channel Index Over Time',  unit: ''    },
 };
 
+const QUICK_RANGE_DAYS = {
+    day: 1,
+    week: 7,
+    month: 30,
+    year: 365,
+};
+
 const charts = {};   // metric -> Chart instance
 let deviceList = [];
+let allDevices = [];
+let activeQuickRange = null;
 let customDeviceColors = {};
 
 function loadCustomColors() {
@@ -77,6 +86,17 @@ async function loadDashboard() {
     const resp = await fetch('/api/devices');
     if (!resp.ok) return;
     const data = await resp.json();
+    allDevices = data.devices || [];
+    populateFilterDeviceSelect(allDevices);
+    setQuickRange('week', false);
+    await refreshDashboard();
+}
+
+async function refreshDashboard() {
+    const params = getFilterParams();
+    const resp = await fetch('/api/devices?' + params);
+    if (!resp.ok) return;
+    const data = await resp.json();
     deviceList = data.devices || [];
 
     renderDeviceTable(deviceList);
@@ -84,6 +104,70 @@ async function loadDashboard() {
     for (const metric of Object.keys(CHART_DEFS)) {
         await updateChart(metric);
     }
+}
+
+function populateFilterDeviceSelect(devices) {
+    const sel = document.getElementById('filter-device');
+    devices.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.device_id;
+        opt.textContent = d.device_id;
+        sel.appendChild(opt);
+    });
+}
+
+function getFilterParams() {
+    const params = new URLSearchParams();
+    const device = document.getElementById('filter-device').value;
+    const from = document.getElementById('filter-from').value;
+    const to = document.getElementById('filter-to').value;
+    if (device) params.set('devices', device);
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    return params;
+}
+
+function applyFilters() {
+    setQuickRangeActive(null);
+    refreshDashboard();
+}
+
+function clearFilters() {
+    document.getElementById('filter-device').value = '';
+    document.getElementById('filter-from').value = '';
+    document.getElementById('filter-to').value = '';
+    setQuickRangeActive(null);
+    refreshDashboard();
+}
+
+function setQuickRange(rangeKey, shouldLoad = true) {
+    const days = QUICK_RANGE_DAYS[rangeKey];
+    if (!days) return;
+    const now = new Date();
+    const from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+    document.getElementById('filter-from').value = toUtcDatetimeLocalValue(from);
+    document.getElementById('filter-to').value = toUtcDatetimeLocalValue(now);
+    setQuickRangeActive(rangeKey);
+
+    if (shouldLoad) refreshDashboard();
+}
+
+function setQuickRangeActive(rangeKey) {
+    activeQuickRange = rangeKey;
+    Object.keys(QUICK_RANGE_DAYS).forEach(key => {
+        const el = document.getElementById(`range-${key}`);
+        if (el) el.classList.toggle('active', key === activeQuickRange);
+    });
+}
+
+function toUtcDatetimeLocalValue(date) {
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    const h = String(date.getUTCHours()).padStart(2, '0');
+    const min = String(date.getUTCMinutes()).padStart(2, '0');
+    return `${y}-${m}-${d}T${h}:${min}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -234,7 +318,10 @@ async function updateChart(metric) {
 
     for (let i = 0; i < devicesToFetch.length; i++) {
         const id = devicesToFetch[i].device_id;
-        const params = new URLSearchParams({ device_id: id, metric });
+        const params = getFilterParams();
+        params.delete('devices');
+        params.set('device_id', id);
+        params.set('metric', metric);
         const resp = await fetch('/api/chart_data?' + params);
         if (!resp.ok) continue;
         const data = await resp.json();

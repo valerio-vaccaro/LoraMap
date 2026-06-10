@@ -362,14 +362,32 @@ def api_positions():
 @login_required
 def api_devices():
     ds_ids = _user_ds_ids()
+    devices_param = request.args.get('devices', '')
+    from_time = request.args.get('from', '')
+    to_time = request.args.get('to', '')
+
+    filters = [UplinkMessage.datasource_id.in_(ds_ids)]
+    if devices_param:
+        device_list = [d.strip() for d in devices_param.split(',') if d.strip()]
+        if device_list:
+            filters.append(UplinkMessage.device_id.in_(device_list))
+    if from_time:
+        dt = parse_datetime(from_time)
+        if dt:
+            filters.append(UplinkMessage.real_timestamp >= dt)
+    if to_time:
+        dt = parse_datetime(to_time)
+        if dt:
+            filters.append(UplinkMessage.real_timestamp <= dt)
+
     device_rows = db.session.query(UplinkMessage.device_id).filter(
-        UplinkMessage.datasource_id.in_(ds_ids)
+        *filters
     ).distinct().all()
     now = datetime.utcnow()
     result = []
     for (device_id,) in device_rows:
         base = UplinkMessage.query.filter(
-            UplinkMessage.datasource_id.in_(ds_ids),
+            *filters,
             UplinkMessage.device_id == device_id,
         )
 
