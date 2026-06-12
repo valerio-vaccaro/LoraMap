@@ -34,12 +34,16 @@ class TTNBaseDecoder(BaseDecoder):
         rx_metadata = uplink.get('rx_metadata', [])
         gateway_count = len(rx_metadata)
         rssi = channel_rssi = snr = channel_index = None
+        gateway_id = gateway_eui = None
         if rx_metadata:
             gw = rx_metadata[0]
             rssi          = gw.get('rssi')
             channel_rssi  = gw.get('channel_rssi')
             snr           = gw.get('snr')
             channel_index = gw.get('channel_index')
+            gateway_ids   = gw.get('gateway_ids') or {}
+            gateway_id    = gateway_ids.get('gateway_id')
+            gateway_eui   = gateway_ids.get('eui')
 
         # LoRa physical layer
         lora = uplink.get('settings', {}).get('data_rate', {}).get('lora', {})
@@ -58,6 +62,8 @@ class TTNBaseDecoder(BaseDecoder):
             'snr':              snr,
             'channel_index':    channel_index,
             'gateway_count':    gateway_count,
+            'gateway_id':       gateway_id,
+            'gateway_eui':      gateway_eui,
             'spreading_factor': spreading_factor,
             'bandwidth':        bandwidth,
             'coding_rate':      coding_rate,

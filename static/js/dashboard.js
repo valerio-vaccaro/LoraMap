@@ -22,10 +22,13 @@ const DEVICE_COLORS = [
 // metric -> { chart instance, label, unit }
 const CHART_DEFS = {
     battery:       { label: 'Battery Over Time',        unit: '%'   },
+    air_temperature: { label: 'Air Temperature Over Time', unit: '°C' },
+    light:         { label: 'Light Over Time',           unit: ''    },
+    positioning_status: { label: 'Positioning Status Over Time', unit: '', categorical: true },
+    event_status:  { label: 'Event Status Over Time', unit: '', categorical: true },
     rssi:          { label: 'RSSI Over Time',            unit: 'dBm' },
     channel_rssi:  { label: 'Channel RSSI Over Time',   unit: 'dBm' },
     snr:           { label: 'SNR Over Time',             unit: 'dB'  },
-    gateway_count: { label: 'Gateway Count Over Time',  unit: ''    },
     channel_index: { label: 'Channel Index Over Time',  unit: ''    },
 };
 
@@ -226,7 +229,7 @@ function renderDeviceTable(devices) {
     const tbody = document.getElementById('device-table-body');
     const cards = document.getElementById('device-summary-cards');
     if (!devices.length) {
-        tbody.innerHTML = '<tr><td colspan="15" class="muted">No data yet. Add a data source and fetch.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="19" class="muted">No data yet. Add a data source and fetch.</td></tr>';
         cards.innerHTML = '<p class="muted">No data yet. Add a data source and fetch.</p>';
         return;
     }
@@ -256,6 +259,10 @@ function renderDeviceTable(devices) {
             <td class="mono small col-hide-mobile">${lastGps}</td>
             <td class="col-hide-mobile"><span class="ago-badge ${gpsAgoClass}">${formatTimeAgo(d.gps_seconds_ago)}</span></td>
             <td>${batteryBadge(d.last_battery)}</td>
+            <td>${v(d.last_air_temperature, ' °C')}</td>
+            <td class="col-hide-mobile">${v(d.last_light)}</td>
+            <td class="col-hide-mobile">${v(d.last_positioning_status)}</td>
+            <td class="col-hide-mobile">${v(d.last_event_status)}</td>
             <td>${v(d.last_rssi, ' dBm')}</td>
             <td class="col-hide-mobile">${v(d.last_snr, ' dB')}</td>
             <td class="col-hide-mobile">${v(d.last_channel_index)}</td>
@@ -291,6 +298,10 @@ function renderDeviceTable(devices) {
 
             <div class="device-summary-primary">
                 <div><span>Battery</span><strong>${batteryBadge(d.last_battery)}</strong></div>
+                <div><span>Temperature</span><strong>${v(d.last_air_temperature, ' °C')}</strong></div>
+                <div><span>Light</span><strong>${v(d.last_light)}</strong></div>
+                <div><span>Positioning status</span><strong>${v(d.last_positioning_status)}</strong></div>
+                <div><span>Event status</span><strong>${v(d.last_event_status)}</strong></div>
                 <div><span>RSSI</span><strong>${v(d.last_rssi, ' dBm')}</strong></div>
                 <div><span>SNR</span><strong>${v(d.last_snr, ' dB')}</strong></div>
                 <div><span>Messages</span><strong>${d.message_count}</strong></div>
@@ -417,6 +428,7 @@ async function updateChart(metric) {
                     grid: { color: '#F0F0F0' },
                 },
                 y: {
+                    type: def.categorical ? 'category' : 'linear',
                     title: { display: true, text: yLabel, color: '#757575' },
                     grid: { color: '#F0F0F0' },
                 },

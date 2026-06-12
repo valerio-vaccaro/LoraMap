@@ -59,6 +59,10 @@
                         <th class="col-hide-mobile">Last GPS At</th>
                         <th class="col-hide-mobile">GPS Ago</th>
                         <th>Battery</th>
+                        <th>Temperature</th>
+                        <th class="col-hide-mobile">Light</th>
+                        <th class="col-hide-mobile">Pos. Status</th>
+                        <th class="col-hide-mobile">Event Status</th>
                         <th>RSSI</th>
                         <th class="col-hide-mobile">SNR</th>
                         <th class="col-hide-mobile">Channel</th>
@@ -72,7 +76,7 @@
                     </tr>
                 </thead>
                 <tbody id="device-table-body">
-                    <tr><td colspan="15" class="muted">Loading…</td></tr>
+                    <tr><td colspan="19" class="muted">Loading…</td></tr>
                 </tbody>
             </table>
         </div>
@@ -104,6 +108,52 @@
         </section>
     </div>
 
+    <div class="charts-grid">
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Air Temperature (°C)</h3>
+                <select id="sel-air_temperature" class="select-sm" onchange="updateChart('air_temperature')">
+                    <option value="">All devices</option>
+                </select>
+            </div>
+            <div class="chart-wrapper"><canvas id="chart-air_temperature"></canvas></div>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Light</h3>
+                <select id="sel-light" class="select-sm" onchange="updateChart('light')">
+                    <option value="">All devices</option>
+                </select>
+            </div>
+            <div class="chart-wrapper"><canvas id="chart-light"></canvas></div>
+        </section>
+    </div>
+
+    <div class="charts-grid charts-grid-single">
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Positioning Status</h3>
+                <select id="sel-positioning_status" class="select-sm" onchange="updateChart('positioning_status')">
+                    <option value="">All devices</option>
+                </select>
+            </div>
+            <div class="chart-wrapper"><canvas id="chart-positioning_status"></canvas></div>
+        </section>
+    </div>
+
+    <div class="charts-grid charts-grid-single">
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Event Status</h3>
+                <select id="sel-event_status" class="select-sm" onchange="updateChart('event_status')">
+                    <option value="">All devices</option>
+                </select>
+            </div>
+            <div class="chart-wrapper"><canvas id="chart-event_status"></canvas></div>
+        </section>
+    </div>
+
     <!-- Charts — row 2 -->
     <div class="charts-grid">
         <section class="card">
@@ -128,17 +178,7 @@
     </div>
 
     <!-- Charts — row 3 -->
-    <div class="charts-grid">
-        <section class="card">
-            <div class="card-header">
-                <h3 class="card-title">Gateway Count</h3>
-                <select id="sel-gateway_count" class="select-sm" onchange="updateChart('gateway_count')">
-                    <option value="">All devices</option>
-                </select>
-            </div>
-            <div class="chart-wrapper"><canvas id="chart-gateway_count"></canvas></div>
-        </section>
-
+    <div class="charts-grid charts-grid-single">
         <section class="card">
             <div class="card-header">
                 <h3 class="card-title">Channel Index</h3>

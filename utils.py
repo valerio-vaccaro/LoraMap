@@ -38,6 +38,16 @@ def parse_and_store(data, datasource_id=None, decoder_type=None):
     ).first()
     if existing:
         existing.real_timestamp = real_timestamp
+        for field in (
+            'f_cnt', 'longitude', 'latitude', 'battery', 'air_temperature',
+            'light', 'rssi', 'channel_rssi', 'snr', 'channel_index',
+            'gateway_count', 'gateway_id', 'gateway_eui', 'spreading_factor',
+            'bandwidth', 'coding_rate', 'consumed_airtime',
+            'positioning_status', 'event_status',
+        ):
+            value = fields.get(field)
+            if value is not None:
+                setattr(existing, field, value)
         try:
             db.session.commit()
         except Exception:
@@ -53,16 +63,21 @@ def parse_and_store(data, datasource_id=None, decoder_type=None):
         longitude=fields.get('longitude'),
         latitude=fields.get('latitude'),
         battery=fields.get('battery'),
+        air_temperature=fields.get('air_temperature'),
+        light=fields.get('light'),
         rssi=fields.get('rssi'),
         channel_rssi=fields.get('channel_rssi'),
         snr=fields.get('snr'),
         channel_index=fields.get('channel_index'),
         gateway_count=fields.get('gateway_count'),
+        gateway_id=fields.get('gateway_id'),
+        gateway_eui=fields.get('gateway_eui'),
         spreading_factor=fields.get('spreading_factor'),
         bandwidth=fields.get('bandwidth'),
         coding_rate=fields.get('coding_rate'),
         consumed_airtime=fields.get('consumed_airtime'),
         positioning_status=fields.get('positioning_status'),
+        event_status=fields.get('event_status'),
     )
     db.session.add(msg)
     try:

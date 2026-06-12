@@ -81,11 +81,11 @@ async function fetchMessages() {
     if (to)     params.set('to', to);
 
     const tbody = document.getElementById('messages-tbody');
-    tbody.innerHTML = '<tr><td colspan="17" class="muted">Loading…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="22" class="muted">Loading…</td></tr>';
 
     const resp = await fetch('/api/messages?' + params);
     if (!resp.ok) {
-        tbody.innerHTML = '<tr><td colspan="17" class="muted">Failed to load data.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="22" class="muted">Failed to load data.</td></tr>';
         return;
     }
     const data = await resp.json();
@@ -167,7 +167,7 @@ function renderTable(messages) {
     count.textContent = messages.length ? `${messages.length} row${messages.length !== 1 ? 's' : ''}` : '';
 
     if (!messages.length) {
-        tbody.innerHTML = '<tr><td colspan="18" class="muted">No messages found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="22" class="muted">No messages found.</td></tr>';
         return;
     }
 
@@ -194,12 +194,16 @@ function renderTable(messages) {
             <td class="mono col-hide-mobile">${lat}</td>
             <td class="mono col-hide-mobile">${lon}</td>
             <td>${batteryBadge(m.battery)}</td>
+            <td>${v(m.air_temperature, ' °C')}</td>
+            <td class="col-hide-mobile">${v(m.light)}</td>
             <td class="col-hide-mobile">${v(m.positioning_status)}</td>
+            <td class="col-hide-mobile">${v(m.event_status)}</td>
             <td>${v(m.rssi, ' dBm')}</td>
             <td class="col-hide-mobile">${v(m.channel_rssi, ' dBm')}</td>
             <td class="col-hide-mobile">${v(m.snr, ' dB')}</td>
             <td class="col-hide-mobile">${v(m.channel_index)}</td>
-            <td class="col-hide-mobile">${v(m.gateway_count)}</td>
+            <td class="mono small col-hide-mobile">${v(m.gateway_id)}</td>
+            <td class="mono small col-hide-mobile">${v(m.gateway_eui)}</td>
             <td class="col-hide-mobile">${m.spreading_factor != null ? 'SF' + m.spreading_factor : '—'}</td>
             <td class="col-hide-mobile">${m.bandwidth != null ? m.bandwidth / 1000 + ' kHz' : '—'}</td>
             <td class="col-hide-mobile">${v(m.coding_rate)}</td>

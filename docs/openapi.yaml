@@ -87,6 +87,12 @@ components:
         battery:
           type: number
           nullable: true
+        air_temperature:
+          type: number
+          nullable: true
+        light:
+          type: number
+          nullable: true
         rssi:
           type: integer
           nullable: true
@@ -102,6 +108,12 @@ components:
         gateway_count:
           type: integer
           nullable: true
+        gateway_id:
+          type: string
+          nullable: true
+        gateway_eui:
+          type: string
+          nullable: true
         spreading_factor:
           type: integer
           nullable: true
@@ -115,6 +127,21 @@ components:
           type: string
           nullable: true
         positioning_status:
+          type: string
+          nullable: true
+        event_status:
+          type: string
+          nullable: true
+        latest_air_temperature:
+          type: number
+          nullable: true
+        latest_light:
+          type: number
+          nullable: true
+        latest_positioning_status:
+          type: string
+          nullable: true
+        latest_event_status:
           type: string
           nullable: true
         f_cnt:
@@ -152,6 +179,18 @@ components:
           format: date-time
         last_battery:
           type: number
+          nullable: true
+        last_air_temperature:
+          type: number
+          nullable: true
+        last_light:
+          type: number
+          nullable: true
+        last_positioning_status:
+          type: string
+          nullable: true
+        last_event_status:
+          type: string
           nullable: true
         last_rssi:
           type: integer
@@ -242,6 +281,18 @@ components:
           format: date-time
         battery:
           type: number
+          nullable: true
+        air_temperature:
+          type: number
+          nullable: true
+        light:
+          type: number
+          nullable: true
+        positioning_status:
+          type: string
+          nullable: true
+        event_status:
+          type: string
           nullable: true
         rssi:
           type: integer
@@ -393,7 +444,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: [battery, rssi, channel_rssi, snr, gateway_count, channel_index]
+            enum: [battery, air_temperature, light, positioning_status, event_status, rssi, channel_rssi, snr, channel_index]
             default: battery
         - $ref: '#/components/parameters/FromParam'
         - $ref: '#/components/parameters/ToParam'

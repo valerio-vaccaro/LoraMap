@@ -69,16 +69,21 @@ class UplinkMessage(db.Model):
     longitude = db.Column(db.Float)
     latitude = db.Column(db.Float)
     battery = db.Column(db.Float)
+    air_temperature = db.Column(db.Float)
+    light = db.Column(db.Float)
     rssi = db.Column(db.Integer)
     channel_rssi = db.Column(db.Integer)
     snr = db.Column(db.Float)
     channel_index = db.Column(db.Integer)
     gateway_count = db.Column(db.Integer)
+    gateway_id = db.Column(db.String(255))
+    gateway_eui = db.Column(db.String(32))
     spreading_factor = db.Column(db.Integer)
     bandwidth = db.Column(db.Integer)
     coding_rate = db.Column(db.String(10))
     consumed_airtime = db.Column(db.String(20))
     positioning_status = db.Column(db.String(50))
+    event_status = db.Column(db.String(255))
 
     __table_args__ = (
         db.UniqueConstraint('device_id', 'received_at', name='uq_device_received'),

@@ -355,6 +355,36 @@ def api_positions():
 
     positions = [_msg_to_dict(m) for m in messages]
     device_ids = list({p['device_id'] for p in positions})
+    latest_values = {}
+    for device_id in device_ids:
+        device_query = UplinkMessage.query.filter(
+            UplinkMessage.datasource_id.in_(ds_ids),
+            UplinkMessage.device_id == device_id,
+        )
+        if from_time:
+            dt = parse_datetime(from_time)
+            if dt:
+                device_query = device_query.filter(UplinkMessage.real_timestamp >= dt)
+        if to_time:
+            dt = parse_datetime(to_time)
+            if dt:
+                device_query = device_query.filter(UplinkMessage.real_timestamp <= dt)
+
+        latest_values[device_id] = {}
+        for field in ('air_temperature', 'light', 'positioning_status', 'event_status'):
+            column = getattr(UplinkMessage, field)
+            latest = device_query.filter(
+                column.isnot(None),
+            ).order_by(UplinkMessage.real_timestamp.desc()).first()
+            latest_values[device_id][field] = getattr(latest, field) if latest else None
+
+    for position in positions:
+        values = latest_values[position['device_id']]
+        position['latest_air_temperature'] = values['air_temperature']
+        position['latest_light'] = values['light']
+        position['latest_positioning_status'] = values['positioning_status']
+        position['latest_event_status'] = values['event_status']
+
     return jsonify({'positions': positions, 'device_ids': device_ids})
 
 
@@ -401,6 +431,18 @@ def api_devices():
         last_battery = base.filter(
             UplinkMessage.battery.isnot(None),
         ).order_by(UplinkMessage.real_timestamp.desc()).first()
+        last_temperature = base.filter(
+            UplinkMessage.air_temperature.isnot(None),
+        ).order_by(UplinkMessage.real_timestamp.desc()).first()
+        last_light = base.filter(
+            UplinkMessage.light.isnot(None),
+        ).order_by(UplinkMessage.real_timestamp.desc()).first()
+        last_positioning_status = base.filter(
+            UplinkMessage.positioning_status.isnot(None),
+        ).order_by(UplinkMessage.real_timestamp.desc()).first()
+        last_event_status = base.filter(
+            UplinkMessage.event_status.isnot(None),
+        ).order_by(UplinkMessage.real_timestamp.desc()).first()
 
         count = base.count()
 
@@ -419,6 +461,13 @@ def api_devices():
             'last_gps_at': last_gps.real_timestamp.isoformat() if last_gps else None,
             'last_gps_received_at': last_gps.received_at.isoformat() if last_gps else None,
             'last_battery': last_battery.battery if last_battery else None,
+            'last_air_temperature': last_temperature.air_temperature if last_temperature else None,
+            'last_light': last_light.light if last_light else None,
+            'last_positioning_status': (
+                last_positioning_status.positioning_status
+                if last_positioning_status else None
+            ),
+            'last_event_status': last_event_status.event_status if last_event_status else None,
             'last_rssi': last_msg.rssi if last_msg else None,
             'last_channel_rssi': last_msg.channel_rssi if last_msg else None,
             'last_snr': last_msg.snr if last_msg else None,
@@ -484,7 +533,10 @@ def api_chart_data():
     from_time = request.args.get('from', '')
     to_time = request.args.get('to', '')
 
-    allowed_metrics = {'battery', 'rssi', 'channel_rssi', 'snr', 'gateway_count', 'channel_index'}
+    allowed_metrics = {
+        'battery', 'air_temperature', 'light', 'positioning_status', 'event_status',
+        'rssi', 'channel_rssi', 'snr', 'channel_index',
+    }
     if metric not in allowed_metrics:
         return jsonify({'error': 'Invalid metric'}), 400
 
@@ -635,16 +687,21 @@ def _msg_to_dict(m):
         'latitude': m.latitude,
         'longitude': m.longitude,
         'battery': m.battery,
+        'air_temperature': m.air_temperature,
+        'light': m.light,
         'rssi': m.rssi,
         'channel_rssi': m.channel_rssi,
         'snr': m.snr,
         'channel_index': m.channel_index,
         'gateway_count': m.gateway_count,
+        'gateway_id': m.gateway_id,
+        'gateway_eui': m.gateway_eui,
         'spreading_factor': m.spreading_factor,
         'bandwidth': m.bandwidth,
         'coding_rate': m.coding_rate,
         'consumed_airtime': m.consumed_airtime,
         'positioning_status': m.positioning_status,
+        'event_status': m.event_status,
         'f_cnt': m.f_cnt,
     }
 

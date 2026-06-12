@@ -213,7 +213,10 @@ function showDetail(pos) {
                 ${row('', 'Delay',     delayFromRealTimestamp(pos.real_timestamp))}
                 ${row('', 'Latitude',  pos.latitude  != null ? pos.latitude.toFixed(6)  : null)}
                 ${row('', 'Longitude', pos.longitude != null ? pos.longitude.toFixed(6) : null)}
-                ${row('', 'Status',    pos.positioning_status)}
+                ${row('', 'Latest Status', pos.latest_positioning_status ?? pos.positioning_status)}
+                ${row('', 'Latest Event', pos.latest_event_status ?? pos.event_status)}
+                ${row('', 'Latest Air Temp.', pos.latest_air_temperature ?? pos.air_temperature, '°C')}
+                ${row('', 'Latest Light', pos.latest_light ?? pos.light)}
             </div>
 
             <div class="ti-card">
@@ -227,7 +230,6 @@ function showDetail(pos) {
                 ${row('', 'RSSI',         pos.rssi         != null ? pos.rssi         : null, 'dBm')}
                 ${row('', 'Channel RSSI', pos.channel_rssi != null ? pos.channel_rssi : null, 'dBm')}
                 ${row('', 'SNR',          pos.snr          != null ? pos.snr          : null, 'dB')}
-                ${row('', 'Gateways',     pos.gateway_count)}
                 ${row('', 'Channel',      pos.channel_index)}
             </div>
 

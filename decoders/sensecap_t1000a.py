@@ -7,10 +7,14 @@ Measurement IDs used:
     4197 → Longitude
     4198 → Latitude
     3000 → Battery (%)
+    4097 → Air Temperature (°C)
+    4199 → Light
     3576 → Positioning Status
+    4200 → Event Status
 """
 from typing import Optional
 from datetime import datetime
+import json
 from .ttn_base import TTNBaseDecoder
 
 
@@ -29,7 +33,8 @@ class SensecapT1000ADecoder(TTNBaseDecoder):
         if decoded.get('err', 0) != 0:
             return None
 
-        longitude = latitude = battery = positioning_status = real_timestamp = None
+        longitude = latitude = battery = air_temperature = light = None
+        positioning_status = event_status = real_timestamp = None
 
         for group in decoded.get('messages', []):
             if not isinstance(group, list):
@@ -56,14 +61,32 @@ class SensecapT1000ADecoder(TTNBaseDecoder):
                         battery = float(val)
                     except (TypeError, ValueError):
                         pass
+                elif mid == '4097':
+                    try:
+                        air_temperature = float(val)
+                    except (TypeError, ValueError):
+                        pass
+                elif mid == '4199':
+                    try:
+                        light = float(val)
+                    except (TypeError, ValueError):
+                        pass
                 elif mid == '3576':
                     positioning_status = str(val)
+                elif mid == '4200':
+                    if isinstance(val, (dict, list)):
+                        event_status = json.dumps(val, separators=(',', ':'))
+                    else:
+                        event_status = str(val)
 
         return {
             'longitude':          longitude,
             'latitude':           latitude,
             'battery':            battery,
+            'air_temperature':    air_temperature,
+            'light':              light,
             'positioning_status': positioning_status,
+            'event_status':       event_status,
             'real_timestamp':     real_timestamp,
         }
 

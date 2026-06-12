@@ -359,7 +359,10 @@ function showDetailPanel(pos, deviceId) {
             ${row('Received', formatDateTime(pos.received_at))}
             ${row('Latitude',  pos.latitude  != null ? pos.latitude.toFixed(6)  : null)}
             ${row('Longitude', pos.longitude != null ? pos.longitude.toFixed(6) : null)}
-            ${row('Pos. Status', pos.positioning_status)}
+            ${row('Latest Pos. Status', pos.latest_positioning_status ?? pos.positioning_status)}
+            ${row('Latest Event Status', pos.latest_event_status ?? pos.event_status)}
+            ${row('Latest Air Temperature', (pos.latest_air_temperature ?? pos.air_temperature) != null ? (pos.latest_air_temperature ?? pos.air_temperature) + ' °C' : null)}
+            ${row('Latest Light', pos.latest_light ?? pos.light)}
 
             <div class="detail-section-label">Radio</div>
             ${row('Battery',      pos.battery      != null ? pos.battery + ' %'       : null)}
@@ -367,7 +370,6 @@ function showDetailPanel(pos, deviceId) {
             ${row('Channel RSSI', pos.channel_rssi != null ? pos.channel_rssi + ' dBm': null)}
             ${row('SNR',          pos.snr          != null ? pos.snr + ' dB'          : null)}
             ${row('Channel',      pos.channel_index)}
-            ${row('Gateways',     pos.gateway_count)}
 
             <div class="detail-section-label">LoRa</div>
             ${row('Spread. Factor', pos.spreading_factor != null ? 'SF' + pos.spreading_factor : null)}
