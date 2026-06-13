@@ -637,7 +637,7 @@ body.dashboard-page { display: flex; flex-direction: column; }
 
 .chart-wrapper {
     position: relative;
-    height: 260px;
+    height: 520px;
 }
 
 .mono {
@@ -657,6 +657,59 @@ body.dashboard-page { display: flex; flex-direction: column; }
 .ago-ok   { background: #E8F5E9; color: #2E7D32; }
 .ago-warn { background: #FFF8E1; color: #E65100; }
 .ago-old  { background: #FFEBEE; color: #C62828; }
+.env-temperature { background: #FFF3E0; color: #E65100; }
+.env-light { background: #FFFDE7; color: #827717; }
+
+.environment-values {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+}
+
+.environment-values > div {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+    width: 100%;
+}
+
+.environment-values > div > span:first-child {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+}
+
+.summary-stacked-values {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.summary-stacked-values > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.summary-stacked-values span {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+}
+
+.summary-stacked-values strong {
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.summary-time-footer {
+    margin-top: 0.35rem;
+}
+
+.radio-values,
+.lora-configuration-values {
+    min-width: 110px;
+}
 
 .color-picker {
     position: relative;

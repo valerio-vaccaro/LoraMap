@@ -45,6 +45,27 @@ DEVICE_COLORS = {
     '#A5D6A7', '#FFE082', '#FFCC80', '#E0E0E0', '#90A4AE', '#80DEEA', '#E6EE9C', '#EF9A9A',
 }
 
+
+def _airtime_milliseconds(value):
+    if not value:
+        return None
+    text = str(value).strip().lower()
+    units = (
+        ('ms', 1.0),
+        ('us', 0.001),
+        ('µs', 0.001),
+        ('ns', 0.000001),
+        ('s', 1000.0),
+    )
+    for suffix, multiplier in units:
+        if text.endswith(suffix):
+            try:
+                return float(text[:-len(suffix)]) * multiplier
+            except ValueError:
+                return None
+    return None
+
+
 app = Flask(__name__)
 app.config.from_object(Config)
 
@@ -581,7 +602,7 @@ def api_chart_data():
 
     allowed_metrics = {
         'battery', 'air_temperature', 'light', 'positioning_status', 'event_status',
-        'rssi', 'channel_rssi', 'snr', 'channel_index',
+        'rssi', 'channel_rssi', 'snr', 'channel_index', 'consumed_airtime',
     }
     if metric not in allowed_metrics:
         return jsonify({'error': 'Invalid metric'}), 400
@@ -606,17 +627,21 @@ def api_chart_data():
     query = query.order_by(UplinkMessage.real_timestamp.asc())
     messages = query.all()
 
-    return jsonify({
-        'data': [
-            {
-                'device_id': m.device_id,
-                'real_timestamp': m.real_timestamp.isoformat(),
-                'received_at': m.received_at.isoformat(),
-                metric: getattr(m, metric),
-            }
-            for m in messages
-        ]
-    })
+    data = []
+    for message in messages:
+        value = getattr(message, metric)
+        if metric == 'consumed_airtime':
+            value = _airtime_milliseconds(value)
+        if value is None:
+            continue
+        data.append({
+            'device_id': message.device_id,
+            'real_timestamp': message.real_timestamp.isoformat(),
+            'received_at': message.received_at.isoformat(),
+            metric: value,
+        })
+
+    return jsonify({'data': data})
 
 
 @app.route('/api/messages/range')

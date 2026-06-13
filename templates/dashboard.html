@@ -56,27 +56,18 @@
                     <tr>
                         <th>Device</th>
                         <th class="col-hide-mobile">Last Position</th>
-                        <th class="col-hide-mobile">Last GPS At</th>
-                        <th class="col-hide-mobile">GPS Ago</th>
-                        <th>Battery</th>
-                        <th>Temperature</th>
-                        <th class="col-hide-mobile">Light</th>
-                        <th class="col-hide-mobile">Pos. Status</th>
-                        <th class="col-hide-mobile">Event Status</th>
-                        <th>RSSI</th>
-                        <th class="col-hide-mobile">SNR</th>
-                        <th class="col-hide-mobile">Channel</th>
-                        <th class="col-hide-mobile">SF</th>
-                        <th class="col-hide-mobile">Bandwidth</th>
-                        <th class="col-hide-mobile">Coding Rate</th>
-                        <th class="col-hide-mobile">Airtime</th>
                         <th>Last Seen</th>
-                        <th>Time Ago</th>
+                        <th class="col-hide-mobile">Last GPS At</th>
+                        <th>Battery</th>
+                        <th class="col-hide-mobile">Environment</th>
+                        <th class="col-hide-mobile">Status</th>
+                        <th class="col-hide-mobile">Radio</th>
+                        <th class="col-hide-mobile">LoRa Configuration</th>
                         <th class="col-hide-mobile">Messages</th>
                     </tr>
                 </thead>
                 <tbody id="device-table-body">
-                    <tr><td colspan="19" class="muted">Loading…</td></tr>
+                    <tr><td colspan="10" class="muted">Loading…</td></tr>
                 </tbody>
             </table>
         </div>
@@ -130,30 +121,6 @@
         </section>
     </div>
 
-    <div class="charts-grid charts-grid-single">
-        <section class="card">
-            <div class="card-header">
-                <h3 class="card-title">Positioning Status</h3>
-                <select id="sel-positioning_status" class="select-sm" onchange="updateChart('positioning_status')">
-                    <option value="">All devices</option>
-                </select>
-            </div>
-            <div class="chart-wrapper"><canvas id="chart-positioning_status"></canvas></div>
-        </section>
-    </div>
-
-    <div class="charts-grid charts-grid-single">
-        <section class="card">
-            <div class="card-header">
-                <h3 class="card-title">Event Status</h3>
-                <select id="sel-event_status" class="select-sm" onchange="updateChart('event_status')">
-                    <option value="">All devices</option>
-                </select>
-            </div>
-            <div class="chart-wrapper"><canvas id="chart-event_status"></canvas></div>
-        </section>
-    </div>
-
     <!-- Charts — row 2 -->
     <div class="charts-grid">
         <section class="card">
@@ -178,7 +145,7 @@
     </div>
 
     <!-- Charts — row 3 -->
-    <div class="charts-grid charts-grid-single">
+    <div class="charts-grid">
         <section class="card">
             <div class="card-header">
                 <h3 class="card-title">Channel Index</h3>
@@ -187,6 +154,16 @@
                 </select>
             </div>
             <div class="chart-wrapper"><canvas id="chart-channel_index"></canvas></div>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Airtime (ms)</h3>
+                <select id="sel-consumed_airtime" class="select-sm" onchange="updateChart('consumed_airtime')">
+                    <option value="">All devices</option>
+                </select>
+            </div>
+            <div class="chart-wrapper"><canvas id="chart-consumed_airtime"></canvas></div>
         </section>
     </div>
 </div>

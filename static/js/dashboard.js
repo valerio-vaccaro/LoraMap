@@ -24,12 +24,11 @@ const CHART_DEFS = {
     battery:       { label: 'Battery Over Time',        unit: '%'   },
     air_temperature: { label: 'Air Temperature Over Time', unit: '°C' },
     light:         { label: 'Light Over Time',           unit: ''    },
-    positioning_status: { label: 'Positioning Status Over Time', unit: '', categorical: true },
-    event_status:  { label: 'Event Status Over Time', unit: '', categorical: true },
     rssi:          { label: 'RSSI Over Time',            unit: 'dBm' },
     channel_rssi:  { label: 'Channel RSSI Over Time',   unit: 'dBm' },
     snr:           { label: 'SNR Over Time',             unit: 'dB'  },
     channel_index: { label: 'Channel Index Over Time',  unit: ''    },
+    consumed_airtime: { label: 'Airtime Over Time', unit: 'ms' },
 };
 
 const QUICK_RANGE_DAYS = {
@@ -221,13 +220,50 @@ function batteryBadge(battery) {
     return `<span class="ago-badge ${cls}">${battery} %</span>`;
 }
 
+function environmentBadge(value, suffix, cls) {
+    if (value == null) return '<span class="muted">—</span>';
+    return `<span class="ago-badge ${cls}">${value}${suffix}</span>`;
+}
+
+function environmentValues(temperature, light) {
+    return `<div class="environment-values">
+        <div><span>Temperature</span>${environmentBadge(temperature, ' °C', 'env-temperature')}</div>
+        <div><span>Light</span>${environmentBadge(light, '', 'env-light')}</div>
+    </div>`;
+}
+
+function statusValues(positioningStatus, eventStatus) {
+    return `<div class="summary-stacked-values">
+        <div><span>Position</span><strong>${v(positioningStatus)}</strong></div>
+        <div><span>Event</span><strong>${v(eventStatus)}</strong></div>
+    </div>`;
+}
+
+function radioValues(device) {
+    return `<div class="summary-stacked-values radio-values">
+        <div><span>RSSI</span><strong>${v(device.last_rssi, ' dBm')}</strong></div>
+        <div><span>SNR</span><strong>${v(device.last_snr, ' dB')}</strong></div>
+        <div><span>Channel</span><strong>${v(device.last_channel_index)}</strong></div>
+    </div>`;
+}
+
+function loraConfigurationValues(device) {
+    return `<div class="summary-stacked-values lora-configuration-values">
+        <div><span>SF</span><strong>${device.last_spreading_factor != null ? 'SF' + device.last_spreading_factor : '—'}</strong></div>
+        <div><span>Bandwidth</span><strong>${device.last_bandwidth != null ? device.last_bandwidth / 1000 + ' kHz' : '—'}</strong></div>
+        <div><span>Coding rate</span><strong>${v(device.last_coding_rate)}</strong></div>
+    </div>`;
+}
+
 function fmt(iso) {
     return iso ? new Date(iso).toLocaleString() : '—';
 }
 
-function dualTime(realIso, receivedIso) {
+function dualTime(realIso, receivedIso, footer = '') {
     if (!realIso && !receivedIso) return '—';
-    return `<span>Real: ${fmt(realIso)}</span><br><span class="muted small">Received: ${fmt(receivedIso)}</span>`;
+    return `<span>Real: ${fmt(realIso)}</span><br>
+        <span class="muted small">Received: ${fmt(receivedIso)}</span>
+        ${footer ? `<div class="summary-time-footer">${footer}</div>` : ''}`;
 }
 
 function renderColorPicker(deviceId, color) {
@@ -276,7 +312,7 @@ function renderDeviceTable(devices) {
     const tbody = document.getElementById('device-table-body');
     const cards = document.getElementById('device-summary-cards');
     if (!devices.length) {
-        tbody.innerHTML = '<tr><td colspan="19" class="muted">No data yet. Add a data source and fetch.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="muted">No data yet. Add a data source and fetch.</td></tr>';
         cards.innerHTML = '<p class="muted">No data yet. Add a data source and fetch.</p>';
         return;
     }
@@ -287,13 +323,20 @@ function renderDeviceTable(devices) {
                <a class="btn btn-ghost btn-sm" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${d.last_latitude},${d.last_longitude}`)}" target="_blank" rel="noopener">Map</a>`
             : '—';
 
-        const lastSeen = dualTime(d.last_real_timestamp, d.last_received_at);
-        const lastGps = dualTime(d.last_gps_at, d.last_gps_received_at);
-
         const agoClass = d.seconds_ago != null && d.seconds_ago > 7200 ? 'ago-old' :
                          d.seconds_ago != null && d.seconds_ago > 1800 ? 'ago-warn' : 'ago-ok';
         const gpsAgoClass = d.gps_seconds_ago != null && d.gps_seconds_ago > 7200 ? 'ago-old' :
                             d.gps_seconds_ago != null && d.gps_seconds_ago > 1800 ? 'ago-warn' : 'ago-ok';
+        const lastSeen = dualTime(
+            d.last_real_timestamp,
+            d.last_received_at,
+            `<span class="ago-badge ${agoClass}">${formatTimeAgo(d.seconds_ago)}</span>`,
+        );
+        const lastGps = dualTime(
+            d.last_gps_at,
+            d.last_gps_received_at,
+            `<span class="ago-badge ${gpsAgoClass}">${formatTimeAgo(d.gps_seconds_ago)}</span>`,
+        );
 
         const color = getDeviceColor(d.device_id);
 
@@ -303,22 +346,13 @@ function renderDeviceTable(devices) {
                 ${renderColorPicker(d.device_id, color)}
             </td>
             <td class="mono col-hide-mobile">${pos}</td>
-            <td class="mono small col-hide-mobile">${lastGps}</td>
-            <td class="col-hide-mobile"><span class="ago-badge ${gpsAgoClass}">${formatTimeAgo(d.gps_seconds_ago)}</span></td>
-            <td>${batteryBadge(d.last_battery)}</td>
-            <td>${v(d.last_air_temperature, ' °C')}</td>
-            <td class="col-hide-mobile">${v(d.last_light)}</td>
-            <td class="col-hide-mobile">${v(d.last_positioning_status)}</td>
-            <td class="col-hide-mobile">${v(d.last_event_status)}</td>
-            <td>${v(d.last_rssi, ' dBm')}</td>
-            <td class="col-hide-mobile">${v(d.last_snr, ' dB')}</td>
-            <td class="col-hide-mobile">${v(d.last_channel_index)}</td>
-            <td class="col-hide-mobile">${d.last_spreading_factor != null ? 'SF' + d.last_spreading_factor : '—'}</td>
-            <td class="col-hide-mobile">${d.last_bandwidth != null ? d.last_bandwidth / 1000 + ' kHz' : '—'}</td>
-            <td class="col-hide-mobile">${v(d.last_coding_rate)}</td>
-            <td class="col-hide-mobile">${v(d.last_consumed_airtime)}</td>
             <td class="mono">${lastSeen}</td>
-            <td><span class="ago-badge ${agoClass}">${formatTimeAgo(d.seconds_ago)}</span></td>
+            <td class="mono small col-hide-mobile">${lastGps}</td>
+            <td>${batteryBadge(d.last_battery)}</td>
+            <td class="col-hide-mobile">${environmentValues(d.last_air_temperature, d.last_light)}</td>
+            <td class="col-hide-mobile">${statusValues(d.last_positioning_status, d.last_event_status)}</td>
+            <td class="col-hide-mobile">${radioValues(d)}</td>
+            <td class="col-hide-mobile">${loraConfigurationValues(d)}</td>
             <td class="col-hide-mobile">${d.message_count}</td>
         </tr>`;
     }).join('');
@@ -345,12 +379,10 @@ function renderDeviceTable(devices) {
 
             <div class="device-summary-primary">
                 <div><span>Battery</span><strong>${batteryBadge(d.last_battery)}</strong></div>
-                <div><span>Temperature</span><strong>${v(d.last_air_temperature, ' °C')}</strong></div>
-                <div><span>Light</span><strong>${v(d.last_light)}</strong></div>
-                <div><span>Positioning status</span><strong>${v(d.last_positioning_status)}</strong></div>
-                <div><span>Event status</span><strong>${v(d.last_event_status)}</strong></div>
-                <div><span>RSSI</span><strong>${v(d.last_rssi, ' dBm')}</strong></div>
-                <div><span>SNR</span><strong>${v(d.last_snr, ' dB')}</strong></div>
+                <div><span>Environment</span>${environmentValues(d.last_air_temperature, d.last_light)}</div>
+                <div><span>Status</span>${statusValues(d.last_positioning_status, d.last_event_status)}</div>
+                <div><span>Radio</span>${radioValues(d)}</div>
+                <div><span>LoRa configuration</span>${loraConfigurationValues(d)}</div>
                 <div><span>Messages</span><strong>${d.message_count}</strong></div>
             </div>
 
@@ -366,11 +398,6 @@ function renderDeviceTable(devices) {
                     <div><span>GPS age</span><strong><span class="ago-badge ${gpsAgoClass}">${formatTimeAgo(d.gps_seconds_ago)}</span></strong></div>
                     <div><span>Last GPS</span><strong>${fmt(d.last_gps_at)}</strong></div>
                     <div><span>Position</span><strong>${hasPosition ? `${d.last_latitude.toFixed(5)}, ${d.last_longitude.toFixed(5)}` : '—'}</strong></div>
-                    <div><span>Channel</span><strong>${v(d.last_channel_index)}</strong></div>
-                    <div><span>Spreading factor</span><strong>${d.last_spreading_factor != null ? 'SF' + d.last_spreading_factor : '—'}</strong></div>
-                    <div><span>Bandwidth</span><strong>${d.last_bandwidth != null ? d.last_bandwidth / 1000 + ' kHz' : '—'}</strong></div>
-                    <div><span>Coding rate</span><strong>${v(d.last_coding_rate)}</strong></div>
-                    <div><span>Airtime</span><strong>${v(d.last_consumed_airtime)}</strong></div>
                 </div>
             </details>
         </article>`;
@@ -492,8 +519,13 @@ async function updateChart(metric) {
                 x: {
                     type: 'time',
                     time: {
-                        tooltipFormat: 'MMM d, HH:mm',
-                        displayFormats: { hour: 'HH:mm', day: 'MMM d' },
+                        tooltipFormat: 'd MMM, HH:mm',
+                        displayFormats: {
+                            minute: 'd MMM HH:mm',
+                            hour: 'd MMM HH:mm',
+                            day: 'd MMM',
+                            month: 'MMM yyyy',
+                        },
                     },
                     title: { display: true, text: 'Time', color: '#757575' },
                     grid: { color: '#F0F0F0' },
