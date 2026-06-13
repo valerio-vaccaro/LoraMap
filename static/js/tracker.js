@@ -23,6 +23,7 @@ let map;
 let markers = {};
 let deviceColors = {};
 let customDeviceColors = {};
+let customDeviceNames = {};
 let allPositions = [];
 let enabledDevices = new Set();
 let knownDevices = new Set();
@@ -42,7 +43,7 @@ async function initTrackerMap() {
         gestureHandling: 'greedy',  // single-finger pan on mobile
     });
 
-    await loadCustomColors();
+    await Promise.all([loadCustomColors(), loadCustomNames()]);
     await loadPositions();
     setInterval(loadPositions, REFRESH_MS);
 }
@@ -83,6 +84,17 @@ function getColor(deviceId) {
         deviceColors[deviceId] = DEVICE_COLORS[hash % DEVICE_COLORS.length];
     }
     return deviceColors[deviceId];
+}
+
+function getDeviceName(deviceId) {
+    const shortName = customDeviceNames[deviceId];
+    return typeof shortName === 'string' && shortName.trim() ? shortName.trim() : deviceId;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[char]);
 }
 
 function makeIcon(color) {
@@ -126,7 +138,7 @@ function renderMarkers(positions) {
                 position: latLng,
                 map,
                 icon: makeIcon(color),
-                title: pos.device_id,
+                title: getDeviceName(pos.device_id),
             });
             m.addListener('click', () => showDetail(pos));
             markers[pos.device_id] = m;
@@ -172,7 +184,7 @@ function updateDeviceFilters(positions) {
         return `<label class="tracker-filter-item">
             <input type="checkbox" ${checked} onchange="toggleTrackerDevice('${encodeURIComponent(id)}', this.checked)">
             <span class="dev-chip-dot" style="background:${color}"></span>
-            <span>${id}${delay}</span>
+            <span>${escapeHtml(getDeviceName(id))}${delay}</span>
         </label>`;
     }).join('');
 }
@@ -201,7 +213,7 @@ function showDetail(pos) {
 
     document.getElementById('tracker-info').innerHTML = `
         <div class="ti-header">
-            <span class="ti-badge" style="background:${color}">${pos.device_id}</span>
+            <span class="ti-badge" style="background:${color}">${escapeHtml(getDeviceName(pos.device_id))}</span>
             <span class="ti-time">🕐 ${fmt(pos.real_timestamp)}</span>
         </div>
 
@@ -256,10 +268,11 @@ function updateDeviceChips(positions) {
         const color = getColor(pos.device_id);
         const bat   = pos.battery != null ? ` · 🔋${pos.battery}%` : '';
         const delay = pos.real_timestamp ? ' · ' + delayFromRealTimestamp(pos.real_timestamp) : '';
+        const encodedId = encodeURIComponent(pos.device_id);
         return `<span class="dev-chip" style="border-color:${color};color:${color}"
-                      onclick="focusDevice('${pos.device_id}')">
+                      onclick="focusDevice(decodeURIComponent('${encodedId}'))">
                     <span class="dev-chip-dot" style="background:${color}"></span>
-                    ${pos.device_id}${bat}${delay}
+                    ${escapeHtml(getDeviceName(pos.device_id))}${bat}${delay}
                 </span>`;
     }).join('');
 }
@@ -313,5 +326,16 @@ async function loadCustomColors() {
         customDeviceColors = data && typeof data.colors === 'object' ? data.colors : {};
     } catch {
         customDeviceColors = {};
+    }
+}
+
+async function loadCustomNames() {
+    try {
+        const resp = await fetch('/api/device_names');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        customDeviceNames = data && typeof data.names === 'object' ? data.names : {};
+    } catch {
+        customDeviceNames = {};
     }
 }

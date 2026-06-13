@@ -54,6 +54,7 @@ let markers = {};       // device_id -> [google.maps.Marker]
 let polylines = {};     // device_id -> google.maps.Polyline
 let deviceColors = {};
 let customDeviceColors = {};
+let customDeviceNames = {};
 let allPositions = [];
 let viewMode = 'all';
 let enabledDevices = new Set();
@@ -70,7 +71,7 @@ async function initMap() {
         fullscreenControl: true,
     });
 
-    await loadCustomColors();
+    await Promise.all([loadCustomColors(), loadCustomNames()]);
     setQuickRange('week', false);
     updateLastUpdateUtc();
     loadPositions();
@@ -85,6 +86,28 @@ async function loadCustomColors() {
     } catch {
         customDeviceColors = {};
     }
+}
+
+async function loadCustomNames() {
+    try {
+        const resp = await fetch('/api/device_names');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        customDeviceNames = data && typeof data.names === 'object' ? data.names : {};
+    } catch {
+        customDeviceNames = {};
+    }
+}
+
+function getDeviceName(deviceId) {
+    const shortName = customDeviceNames[deviceId];
+    return typeof shortName === 'string' && shortName.trim() ? shortName.trim() : deviceId;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[char]);
 }
 
 function getDeviceColor(deviceId) {
@@ -181,7 +204,7 @@ function renderPositions() {
                 position: latLng,
                 map,
                 icon: getMarkerIcon(color),
-                title: deviceId + ' — ' + formatDateTime(pos.real_timestamp),
+                title: getDeviceName(deviceId) + ' — ' + formatDateTime(pos.real_timestamp),
             });
             marker.addListener('click', () => showDetailPanel(pos, deviceId));
             markers[deviceId].push(marker);
@@ -232,11 +255,12 @@ function updateDeviceList(serverDeviceIds) {
     container.innerHTML = visibleIds.map(deviceId => {
         const color = getDeviceColor(deviceId);
         const checked = enabledDevices.has(deviceId);
+        const encodedId = encodeURIComponent(deviceId);
         return `<label class="device-item">
-            <input type="checkbox" value="${deviceId}" ${checked ? 'checked' : ''}
-                   onchange="toggleDevice('${deviceId}', this.checked)">
+            <input type="checkbox" value="${escapeHtml(deviceId)}" ${checked ? 'checked' : ''}
+                   onchange="toggleDevice(decodeURIComponent('${encodedId}'), this.checked)">
             <span class="device-color" style="background:${color}"></span>
-            <span>${deviceId}</span>
+            <span>${escapeHtml(getDeviceName(deviceId))}</span>
         </label>`;
     }).join('');
 }
@@ -350,7 +374,7 @@ function showDetailPanel(pos, deviceId) {
 
     content.innerHTML = `
         <div class="detail-header">
-            <span class="device-badge" style="background:${color}">${deviceId}</span>
+            <span class="device-badge" style="background:${color}">${escapeHtml(getDeviceName(deviceId))}</span>
             <button class="close-btn" onclick="document.getElementById('detail-panel').style.display='none'">✕</button>
         </div>
         <div class="detail-content">

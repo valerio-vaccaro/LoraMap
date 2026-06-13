@@ -8,7 +8,14 @@ from sqlalchemy import func
 import requests as http_requests
 
 from config import Config
-from models import db, User, DataSource, UplinkMessage, DeviceColorPreference
+from models import (
+    db,
+    User,
+    DataSource,
+    UplinkMessage,
+    DeviceColorPreference,
+    DeviceNamePreference,
+)
 from utils import parse_and_store, parse_lines, parse_datetime
 from decoders.registry import DECODER_CHOICES
 
@@ -522,6 +529,45 @@ def api_set_device_color():
     db.session.commit()
 
     return jsonify({'ok': True, 'device_id': device_id, 'color': color})
+
+
+@app.route('/api/device_names', methods=['GET'])
+@login_required
+def api_device_names():
+    rows = DeviceNamePreference.query.filter_by(user_id=current_user.id).all()
+    return jsonify({'names': {r.device_id: r.short_name for r in rows}})
+
+
+@app.route('/api/device_names', methods=['POST'])
+@login_required
+def api_set_device_name():
+    payload = request.get_json(silent=True) or {}
+    device_id = str(payload.get('device_id', '')).strip()
+    short_name = str(payload.get('short_name', '')).strip()
+
+    if not device_id:
+        return jsonify({'error': 'device_id is required'}), 400
+    if len(short_name) > 50:
+        return jsonify({'error': 'Short name must be 50 characters or fewer'}), 400
+
+    pref = DeviceNamePreference.query.filter_by(
+        user_id=current_user.id,
+        device_id=device_id,
+    ).first()
+    if short_name:
+        if pref:
+            pref.short_name = short_name
+        else:
+            db.session.add(DeviceNamePreference(
+                user_id=current_user.id,
+                device_id=device_id,
+                short_name=short_name,
+            ))
+    elif pref:
+        db.session.delete(pref)
+    db.session.commit()
+
+    return jsonify({'ok': True, 'device_id': device_id, 'short_name': short_name})
 
 
 @app.route('/api/chart_data')

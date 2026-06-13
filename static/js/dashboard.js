@@ -44,6 +44,7 @@ let deviceList = [];
 let allDevices = [];
 let activeQuickRange = null;
 let customDeviceColors = {};
+let customDeviceNames = {};
 
 function loadCustomColors() {
     customDeviceColors = {};
@@ -59,6 +60,28 @@ async function fetchCustomColors() {
     } catch {
         customDeviceColors = {};
     }
+}
+
+async function fetchCustomNames() {
+    try {
+        const resp = await fetch('/api/device_names');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        customDeviceNames = data && typeof data.names === 'object' ? data.names : {};
+    } catch {
+        customDeviceNames = {};
+    }
+}
+
+function getDeviceName(deviceId) {
+    const shortName = customDeviceNames[deviceId];
+    return typeof shortName === 'string' && shortName.trim() ? shortName.trim() : deviceId;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[char]);
 }
 
 function normalizeColor(color) {
@@ -85,7 +108,7 @@ function getDeviceColor(deviceId) {
 
 async function loadDashboard() {
     loadCustomColors();
-    await fetchCustomColors();
+    await Promise.all([fetchCustomColors(), fetchCustomNames()]);
     const resp = await fetch('/api/devices');
     if (!resp.ok) return;
     const data = await resp.json();
@@ -111,12 +134,15 @@ async function refreshDashboard() {
 
 function populateFilterDeviceSelect(devices) {
     const sel = document.getElementById('filter-device');
+    const currentVal = sel.value;
+    while (sel.options.length > 1) sel.remove(1);
     devices.forEach(d => {
         const opt = document.createElement('option');
         opt.value = d.device_id;
-        opt.textContent = d.device_id;
+        opt.textContent = getDeviceName(d.device_id);
         sel.appendChild(opt);
     });
+    sel.value = currentVal;
 }
 
 function getFilterParams() {
@@ -225,6 +251,27 @@ function renderColorPicker(deviceId, color) {
     </details>`;
 }
 
+function renderShortNameEditor(deviceId) {
+    const encodedId = encodeURIComponent(deviceId);
+    const shortName = customDeviceNames[deviceId] || '';
+    return `<div class="device-name-editor">
+        <div>
+            <span class="device-name-label">Real name</span>
+            <strong class="mono" title="${escapeHtml(deviceId)}">${escapeHtml(deviceId)}</strong>
+        </div>
+        <label class="device-name-controls">
+            <span class="device-name-label">Short name</span>
+            <input type="text"
+                   maxlength="50"
+                   value="${escapeHtml(shortName)}"
+                   placeholder="Uses real name when empty"
+                   aria-label="Short name for ${escapeHtml(deviceId)}"
+                   onkeydown="if (event.key === 'Enter') saveDeviceName('${encodedId}', this)"
+                   onchange="saveDeviceName('${encodedId}', this)">
+        </label>
+    </div>`;
+}
+
 function renderDeviceTable(devices) {
     const tbody = document.getElementById('device-table-body');
     const cards = document.getElementById('device-summary-cards');
@@ -252,7 +299,7 @@ function renderDeviceTable(devices) {
 
         return `<tr>
             <td>
-                <strong>${d.device_id}</strong>
+                ${renderShortNameEditor(d.device_id)}
                 ${renderColorPicker(d.device_id, color)}
             </td>
             <td class="mono col-hide-mobile">${pos}</td>
@@ -290,7 +337,7 @@ function renderDeviceTable(devices) {
         return `<article class="device-summary-card">
             <div class="device-summary-card-header">
                 <div>
-                    <strong class="device-summary-name">${d.device_id}</strong>
+                    ${renderShortNameEditor(d.device_id)}
                     ${renderColorPicker(d.device_id, color)}
                 </div>
                 <span class="ago-badge ${agoClass}">${formatTimeAgo(d.seconds_ago)}</span>
@@ -347,6 +394,30 @@ async function setDeviceColor(encodedDeviceId, color) {
     }
 }
 
+async function saveDeviceName(encodedDeviceId, input) {
+    const deviceId = decodeURIComponent(encodedDeviceId);
+    const shortName = input.value.trim();
+    input.disabled = true;
+    try {
+        const resp = await fetch('/api/device_names', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ device_id: deviceId, short_name: shortName }),
+        });
+        if (!resp.ok) return;
+        if (shortName) customDeviceNames[deviceId] = shortName;
+        else delete customDeviceNames[deviceId];
+        renderDeviceTable(deviceList);
+        populateFilterDeviceSelect(allDevices);
+        populateDeviceSelects(deviceList);
+        for (const metric of Object.keys(CHART_DEFS)) {
+            await updateChart(metric);
+        }
+    } finally {
+        input.disabled = false;
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Device selects
 // ---------------------------------------------------------------------------
@@ -360,7 +431,7 @@ function populateDeviceSelects(devices) {
         devices.forEach(d => {
             const opt = document.createElement('option');
             opt.value = d.device_id;
-            opt.textContent = d.device_id;
+            opt.textContent = getDeviceName(d.device_id);
             sel.appendChild(opt);
         });
         sel.value = currentVal;
@@ -395,7 +466,7 @@ async function updateChart(metric) {
         if (data.data && data.data.length > 0) {
             const color = getDeviceColor(id);
             datasets.push({
-                label: id,
+                label: getDeviceName(id),
                 data: data.data.map(d => ({ x: new Date(d.real_timestamp), y: d[metric] })),
                 borderColor: color,
                 backgroundColor: color + '20',

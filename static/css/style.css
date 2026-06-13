@@ -662,6 +662,37 @@ body.dashboard-page { display: flex; flex-direction: column; }
     position: relative;
 }
 
+.device-name-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 0.35rem;
+}
+
+.device-name-editor > div,
+.device-name-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.device-name-label {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.device-name-controls input {
+    width: min(180px, 100%);
+    padding: 0.3rem 0.45rem;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font: inherit;
+    font-size: 0.82rem;
+}
+
 .color-picker > summary {
     list-style: none;
     cursor: pointer;

@@ -25,6 +25,7 @@ const QUICK_RANGE_DAYS = {
 };
 let activeQuickRange = null;
 let customDeviceColors = {};
+let customDeviceNames = {};
 
 async function loadCustomColors() {
     try {
@@ -35,6 +36,28 @@ async function loadCustomColors() {
     } catch {
         customDeviceColors = {};
     }
+}
+
+async function loadCustomNames() {
+    try {
+        const resp = await fetch('/api/device_names');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        customDeviceNames = data && typeof data.names === 'object' ? data.names : {};
+    } catch {
+        customDeviceNames = {};
+    }
+}
+
+function getDeviceName(deviceId) {
+    const shortName = customDeviceNames[deviceId];
+    return typeof shortName === 'string' && shortName.trim() ? shortName.trim() : deviceId;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[char]);
 }
 
 function getDeviceColor(deviceId) {
@@ -51,7 +74,7 @@ function getDeviceColor(deviceId) {
 }
 
 async function loadData() {
-    await loadCustomColors();
+    await Promise.all([loadCustomColors(), loadCustomNames()]);
     // Populate device select
     const devResp = await fetch('/api/devices');
     if (devResp.ok) {
@@ -60,7 +83,7 @@ async function loadData() {
         (devData.devices || []).forEach(d => {
             const opt = document.createElement('option');
             opt.value = d.device_id;
-            opt.textContent = d.device_id;
+            opt.textContent = getDeviceName(d.device_id);
             sel.appendChild(opt);
         });
     }
@@ -185,7 +208,7 @@ function renderTable(messages) {
         return `<tr>
             <td class="mono small">${time}</td>
             <td class="mono small">${realTime}</td>
-            <td><strong>${m.device_id}</strong></td>
+            <td><strong>${escapeHtml(getDeviceName(m.device_id))}</strong></td>
             <td>
                 <span class="device-color-dot" style="background:${color}"></span>
                 <span class="mono small">${color}</span>
