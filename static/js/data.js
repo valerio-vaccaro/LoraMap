@@ -113,6 +113,7 @@ async function refreshDataView() {
 
 function getFilterParams() {
     const device  = document.getElementById('filter-device').value;
+    const board   = document.getElementById('filter-board').value;
     const from    = document.getElementById('filter-from').value;
     const to      = document.getElementById('filter-to').value;
     const batteryMin = document.getElementById('filter-battery-min').value;
@@ -130,6 +131,7 @@ function getFilterParams() {
 
     const params = new URLSearchParams();
     if (device) params.set('devices', device);
+    if (board)  params.set('board', board);
     if (from)   params.set('from', from);
     if (to)     params.set('to', to);
     if (batteryMin) params.set('battery_min', batteryMin);
@@ -152,16 +154,44 @@ async function fetchMessages() {
     const params = getFilterParams();
 
     const tbody = document.getElementById('messages-tbody');
-    tbody.innerHTML = '<tr><td colspan="25" class="muted">Loading…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="26" class="muted">Loading…</td></tr>';
 
     const resp = await fetch('/api/messages?' + params);
     if (!resp.ok) {
-        tbody.innerHTML = '<tr><td colspan="25" class="muted">Failed to load data.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="26" class="muted">Failed to load data.</td></tr>';
         return;
     }
     const data = await resp.json();
-    renderTable(data.messages || []);
+    const messages = data.messages || [];
+    updateBoardFilterOptions(messages);
+    renderTable(messages);
     updateLastUpdateUtc();
+}
+
+function updateBoardFilterOptions(messages) {
+    const select = document.getElementById('filter-board');
+    if (!select) return;
+    const currentValue = select.value;
+    const boardValues = [...new Set(messages
+        .map(message => message.device_model)
+        .filter(value => typeof value === 'string' && value.trim())
+    )].sort((a, b) => a.localeCompare(b));
+    if (currentValue && !boardValues.includes(currentValue)) {
+        boardValues.push(currentValue);
+        boardValues.sort((a, b) => a.localeCompare(b));
+    }
+
+    select.innerHTML = '<option value="">All boards</option>';
+    boardValues.forEach(board => {
+        const option = document.createElement('option');
+        option.value = board;
+        option.textContent = board;
+        select.appendChild(option);
+    });
+
+    if (currentValue && boardValues.includes(currentValue)) {
+        select.value = currentValue;
+    }
 }
 
 function applyFilters() {
@@ -171,6 +201,7 @@ function applyFilters() {
 
 function clearFilters() {
     document.getElementById('filter-device').value = '';
+    document.getElementById('filter-board').value = '';
     document.getElementById('filter-from').value = '';
     document.getElementById('filter-to').value = '';
     document.getElementById('filter-battery-min').value = '';
@@ -355,7 +386,7 @@ function renderTable(messages) {
     count.textContent = messages.length ? `${messages.length} row${messages.length !== 1 ? 's' : ''}` : '';
 
     if (!messages.length) {
-        tbody.innerHTML = '<tr><td colspan="25" class="muted">No messages found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="26" class="muted">No messages found.</td></tr>';
         return;
     }
 
@@ -374,6 +405,7 @@ function renderTable(messages) {
             <td class="mono small">${time}</td>
             <td class="mono small">${realTime}</td>
             <td><strong>${escapeHtml(getDeviceName(m.device_id))}</strong></td>
+            <td>${escapeHtml(m.device_model || '—')}</td>
             <td>
                 <span class="device-color-dot" style="background:${color}"></span>
                 <span class="mono small">${color}</span>

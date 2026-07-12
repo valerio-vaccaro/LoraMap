@@ -22,9 +22,9 @@ Authenticated Flask application for LoRa device tracking, telemetry storage, and
 ## Supported decoders
 
 - `sensecap_t1000a` → SenseCap T1000-A/B (TTN)
-- `dragino_lht65` → Dragino LHT65 (TTN)
+- `dragino_lht5x` → Dragino LHT52/LHT65 (TTN)
 
-The Dragino LHT65 decoder maps:
+The shared Dragino LHT52/LHT65 decoder maps:
 
 - `air_temperature` = internal `TempC_SHT`
 - `external_temperature` = `TempC_DS`

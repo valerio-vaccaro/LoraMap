@@ -44,6 +44,7 @@ let allDevices = [];
 let activeQuickRange = null;
 let customDeviceColors = {};
 let customDeviceNames = {};
+let boardOptions = [];
 
 function loadCustomColors() {
     customDeviceColors = {};
@@ -124,6 +125,7 @@ async function refreshDashboard() {
     const data = await resp.json();
     deviceList = data.devices || [];
 
+    updateBoardFilterOptions();
     renderDeviceTable(deviceList);
     populateDeviceSelects(deviceList);
     for (const metric of Object.keys(CHART_DEFS)) {
@@ -147,12 +149,39 @@ function populateFilterDeviceSelect(devices) {
 function getFilterParams() {
     const params = new URLSearchParams();
     const device = document.getElementById('filter-device').value;
+    const board = document.getElementById('filter-board').value;
     const from = document.getElementById('filter-from').value;
     const to = document.getElementById('filter-to').value;
     if (device) params.set('devices', device);
+    if (board) params.set('board', board);
     if (from) params.set('from', from);
     if (to) params.set('to', to);
     return params;
+}
+
+function updateBoardFilterOptions() {
+    const select = document.getElementById('filter-board');
+    if (!select) return;
+    const currentValue = select.value;
+
+    for (const device of allDevices) {
+        if (device.device_model && !boardOptions.includes(device.device_model)) {
+            boardOptions.push(device.device_model);
+        }
+    }
+    boardOptions.sort((a, b) => a.localeCompare(b));
+
+    select.innerHTML = '<option value="">All boards</option>';
+    boardOptions.forEach(board => {
+        const option = document.createElement('option');
+        option.value = board;
+        option.textContent = board;
+        select.appendChild(option);
+    });
+
+    if (currentValue && boardOptions.includes(currentValue)) {
+        select.value = currentValue;
+    }
 }
 
 function applyFilters() {
@@ -162,6 +191,7 @@ function applyFilters() {
 
 function clearFilters() {
     document.getElementById('filter-device').value = '';
+    document.getElementById('filter-board').value = '';
     document.getElementById('filter-from').value = '';
     document.getElementById('filter-to').value = '';
     setQuickRangeActive(null);

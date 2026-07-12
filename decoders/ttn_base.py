@@ -57,6 +57,7 @@ class TTNBaseDecoder(BaseDecoder):
             'device_id':        device_id,
             'received_at':      received_at,
             'real_timestamp':   received_at,
+            'device_model':     (uplink.get('version_ids') or {}).get('model_id'),
             'f_cnt':            uplink.get('f_cnt'),
             'consumed_airtime': uplink.get('consumed_airtime'),
             'rssi':             rssi,

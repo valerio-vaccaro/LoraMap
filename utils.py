@@ -30,6 +30,7 @@ def parse_and_store(data, datasource_id=None, decoder_type=None):
     fields = decoder.decode(data)
     if not fields:
         return 0
+    _sanitize_temperature_fields(fields)
 
     real_timestamp = fields.get('real_timestamp') or fields['received_at']
     existing = UplinkMessage.query.filter_by(
@@ -39,7 +40,7 @@ def parse_and_store(data, datasource_id=None, decoder_type=None):
     if existing:
         existing.real_timestamp = real_timestamp
         for field in (
-            'f_cnt', 'longitude', 'latitude', 'battery', 'battery_voltage',
+            'device_model', 'f_cnt', 'longitude', 'latitude', 'battery', 'battery_voltage',
             'air_temperature', 'external_temperature', 'humidity', 'light',
             'rssi', 'channel_rssi', 'snr', 'channel_index',
             'gateway_count', 'gateway_id', 'gateway_eui', 'spreading_factor',
@@ -60,6 +61,7 @@ def parse_and_store(data, datasource_id=None, decoder_type=None):
         device_id=fields['device_id'],
         received_at=fields['received_at'],
         real_timestamp=real_timestamp,
+        device_model=fields.get('device_model'),
         f_cnt=fields.get('f_cnt'),
         longitude=fields.get('longitude'),
         latitude=fields.get('latitude'),
@@ -109,3 +111,14 @@ def parse_lines(lines, datasource_id=None, decoder_type=None):
         except (json.JSONDecodeError, Exception):
             skipped += 1
     return inserted, skipped
+
+
+def _sanitize_temperature_fields(fields):
+    for key in ('air_temperature', 'external_temperature'):
+        value = fields.get(key)
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            continue
+        if numeric > 100.0:
+            fields[key] = None

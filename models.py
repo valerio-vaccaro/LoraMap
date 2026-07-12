@@ -69,6 +69,7 @@ class UplinkMessage(db.Model):
     device_id = db.Column(db.String(100), nullable=False, index=True)
     received_at = db.Column(db.DateTime, nullable=False, index=True)
     real_timestamp = db.Column(db.DateTime, nullable=False, index=True)
+    device_model = db.Column(db.String(50))
     f_cnt = db.Column(db.Integer)
     longitude = db.Column(db.Float)
     latitude = db.Column(db.Float)

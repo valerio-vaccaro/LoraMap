@@ -630,6 +630,7 @@ def api_devices():
             'last_bandwidth': last_msg.bandwidth if last_msg else None,
             'last_coding_rate': last_msg.coding_rate if last_msg else None,
             'last_consumed_airtime': last_msg.consumed_airtime if last_msg else None,
+            'device_model': last_msg.device_model if last_msg else None,
             'last_real_timestamp': last_msg.real_timestamp.isoformat() if last_msg else None,
             'last_received_at': last_msg.received_at.isoformat() if last_msg else None,
             'seconds_ago': seconds_ago,
@@ -939,6 +940,10 @@ def _apply_message_filters(query, devices='', from_time='', to_time=''):
         if device_list:
             query = query.filter(UplinkMessage.device_id.in_(device_list))
 
+    board = str(request.args.get('board', '')).strip()
+    if board:
+        query = query.filter(UplinkMessage.device_model == board)
+
     if from_time:
         dt = parse_datetime(from_time)
         if dt:
@@ -1010,6 +1015,7 @@ def _msg_to_dict(m):
     return {
         'id': m.id,
         'device_id': m.device_id,
+        'device_model': m.device_model,
         'received_at': m.received_at.isoformat(),
         'real_timestamp': m.real_timestamp.isoformat(),
         'latitude': m.latitude,
