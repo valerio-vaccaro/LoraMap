@@ -56,6 +56,10 @@ class DataSource(db.Model):
     last_fetched_at = db.Column(db.DateTime)
     last_fetch_status = db.Column(db.String(255))
 
+    __table_args__ = (
+        db.Index('ix_datasources_user_id_enabled', 'user_id', 'enabled'),
+    )
+
 
 class UplinkMessage(db.Model):
     __tablename__ = 'uplink_messages'
@@ -69,7 +73,10 @@ class UplinkMessage(db.Model):
     longitude = db.Column(db.Float)
     latitude = db.Column(db.Float)
     battery = db.Column(db.Float)
+    battery_voltage = db.Column(db.Float)
     air_temperature = db.Column(db.Float)
+    external_temperature = db.Column(db.Float)
+    humidity = db.Column(db.Float)
     light = db.Column(db.Float)
     rssi = db.Column(db.Integer)
     channel_rssi = db.Column(db.Integer)
@@ -87,6 +94,8 @@ class UplinkMessage(db.Model):
 
     __table_args__ = (
         db.UniqueConstraint('device_id', 'received_at', name='uq_device_received'),
+        db.Index('ix_uplink_messages_datasource_real_timestamp', 'datasource_id', 'real_timestamp'),
+        db.Index('ix_uplink_messages_datasource_device_real_timestamp', 'datasource_id', 'device_id', 'real_timestamp'),
     )
 
 

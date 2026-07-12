@@ -39,8 +39,9 @@ def parse_and_store(data, datasource_id=None, decoder_type=None):
     if existing:
         existing.real_timestamp = real_timestamp
         for field in (
-            'f_cnt', 'longitude', 'latitude', 'battery', 'air_temperature',
-            'light', 'rssi', 'channel_rssi', 'snr', 'channel_index',
+            'f_cnt', 'longitude', 'latitude', 'battery', 'battery_voltage',
+            'air_temperature', 'external_temperature', 'humidity', 'light',
+            'rssi', 'channel_rssi', 'snr', 'channel_index',
             'gateway_count', 'gateway_id', 'gateway_eui', 'spreading_factor',
             'bandwidth', 'coding_rate', 'consumed_airtime',
             'positioning_status', 'event_status',
@@ -63,7 +64,10 @@ def parse_and_store(data, datasource_id=None, decoder_type=None):
         longitude=fields.get('longitude'),
         latitude=fields.get('latitude'),
         battery=fields.get('battery'),
+        battery_voltage=fields.get('battery_voltage'),
         air_temperature=fields.get('air_temperature'),
+        external_temperature=fields.get('external_temperature'),
+        humidity=fields.get('humidity'),
         light=fields.get('light'),
         rssi=fields.get('rssi'),
         channel_rssi=fields.get('channel_rssi'),

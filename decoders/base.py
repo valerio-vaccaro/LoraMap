@@ -25,7 +25,8 @@ class BaseDecoder(ABC):
             real_timestamp (datetime, optional; defaults to received_at)
 
         And optionally any of:
-            latitude, longitude, battery, air_temperature, light,
+            latitude, longitude, battery, battery_voltage,
+            air_temperature, external_temperature, humidity, light,
             positioning_status, event_status,
             rssi, channel_rssi, snr, channel_index, gateway_count,
             gateway_id, gateway_eui,

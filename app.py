@@ -399,7 +399,15 @@ def api_positions():
                 device_query = device_query.filter(UplinkMessage.real_timestamp <= dt)
 
         latest_values[device_id] = {}
-        for field in ('air_temperature', 'light', 'positioning_status', 'event_status'):
+        for field in (
+            'air_temperature',
+            'external_temperature',
+            'humidity',
+            'battery_voltage',
+            'light',
+            'positioning_status',
+            'event_status',
+        ):
             column = getattr(UplinkMessage, field)
             latest = device_query.filter(
                 column.isnot(None),
@@ -409,6 +417,9 @@ def api_positions():
     for position in positions:
         values = latest_values[position['device_id']]
         position['latest_air_temperature'] = values['air_temperature']
+        position['latest_external_temperature'] = values['external_temperature']
+        position['latest_humidity'] = values['humidity']
+        position['latest_battery_voltage'] = values['battery_voltage']
         position['latest_light'] = values['light']
         position['latest_positioning_status'] = values['positioning_status']
         position['latest_event_status'] = values['event_status']
@@ -459,8 +470,17 @@ def api_devices():
         last_battery = base.filter(
             UplinkMessage.battery.isnot(None),
         ).order_by(UplinkMessage.real_timestamp.desc()).first()
+        last_battery_voltage = base.filter(
+            UplinkMessage.battery_voltage.isnot(None),
+        ).order_by(UplinkMessage.real_timestamp.desc()).first()
         last_temperature = base.filter(
             UplinkMessage.air_temperature.isnot(None),
+        ).order_by(UplinkMessage.real_timestamp.desc()).first()
+        last_external_temperature = base.filter(
+            UplinkMessage.external_temperature.isnot(None),
+        ).order_by(UplinkMessage.real_timestamp.desc()).first()
+        last_humidity = base.filter(
+            UplinkMessage.humidity.isnot(None),
         ).order_by(UplinkMessage.real_timestamp.desc()).first()
         last_light = base.filter(
             UplinkMessage.light.isnot(None),
@@ -489,7 +509,12 @@ def api_devices():
             'last_gps_at': last_gps.real_timestamp.isoformat() if last_gps else None,
             'last_gps_received_at': last_gps.received_at.isoformat() if last_gps else None,
             'last_battery': last_battery.battery if last_battery else None,
+            'last_battery_voltage': last_battery_voltage.battery_voltage if last_battery_voltage else None,
             'last_air_temperature': last_temperature.air_temperature if last_temperature else None,
+            'last_external_temperature': (
+                last_external_temperature.external_temperature if last_external_temperature else None
+            ),
+            'last_humidity': last_humidity.humidity if last_humidity else None,
             'last_light': last_light.light if last_light else None,
             'last_positioning_status': (
                 last_positioning_status.positioning_status
@@ -601,7 +626,8 @@ def api_chart_data():
     to_time = request.args.get('to', '')
 
     allowed_metrics = {
-        'battery', 'air_temperature', 'light', 'positioning_status', 'event_status',
+        'battery', 'battery_voltage', 'air_temperature', 'external_temperature',
+        'humidity', 'light', 'positioning_status', 'event_status',
         'rssi', 'channel_rssi', 'snr', 'channel_index', 'consumed_airtime',
     }
     if metric not in allowed_metrics:
@@ -725,7 +751,14 @@ def _apply_message_filters(query, devices='', from_time='', to_time=''):
         if dt:
             query = query.filter(UplinkMessage.real_timestamp <= dt)
 
-    for field_name in ('battery', 'air_temperature', 'light'):
+    for field_name in (
+        'battery',
+        'battery_voltage',
+        'air_temperature',
+        'external_temperature',
+        'humidity',
+        'light',
+    ):
         min_value = _parse_float_arg(request.args.get(f'{field_name}_min', ''))
         max_value = _parse_float_arg(request.args.get(f'{field_name}_max', ''))
         column = getattr(UplinkMessage, field_name)
@@ -784,7 +817,10 @@ def _msg_to_dict(m):
         'latitude': m.latitude,
         'longitude': m.longitude,
         'battery': m.battery,
+        'battery_voltage': m.battery_voltage,
         'air_temperature': m.air_temperature,
+        'external_temperature': m.external_temperature,
+        'humidity': m.humidity,
         'light': m.light,
         'rssi': m.rssi,
         'channel_rssi': m.channel_rssi,

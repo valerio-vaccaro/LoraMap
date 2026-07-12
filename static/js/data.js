@@ -25,7 +25,10 @@ const QUICK_RANGE_DAYS = {
 };
 const CHART_DEFS = {
     battery: { label: 'Battery Over Time', unit: '%' },
-    air_temperature: { label: 'Temperature Over Time', unit: '°C' },
+    battery_voltage: { label: 'Battery Voltage Over Time', unit: 'V' },
+    air_temperature: { label: 'Internal Temperature Over Time', unit: '°C' },
+    external_temperature: { label: 'External Temperature Over Time', unit: '°C' },
+    humidity: { label: 'Humidity Over Time', unit: '%' },
     light: { label: 'Luminosity Over Time', unit: '' },
 };
 let activeQuickRange = null;
@@ -114,8 +117,14 @@ function getFilterParams() {
     const to      = document.getElementById('filter-to').value;
     const batteryMin = document.getElementById('filter-battery-min').value;
     const batteryMax = document.getElementById('filter-battery-max').value;
+    const batteryVoltageMin = document.getElementById('filter-battery-voltage-min').value;
+    const batteryVoltageMax = document.getElementById('filter-battery-voltage-max').value;
     const temperatureMin = document.getElementById('filter-temperature-min').value;
     const temperatureMax = document.getElementById('filter-temperature-max').value;
+    const externalTemperatureMin = document.getElementById('filter-external-temperature-min').value;
+    const externalTemperatureMax = document.getElementById('filter-external-temperature-max').value;
+    const humidityMin = document.getElementById('filter-humidity-min').value;
+    const humidityMax = document.getElementById('filter-humidity-max').value;
     const lightMin = document.getElementById('filter-light-min').value;
     const lightMax = document.getElementById('filter-light-max').value;
 
@@ -125,8 +134,14 @@ function getFilterParams() {
     if (to)     params.set('to', to);
     if (batteryMin) params.set('battery_min', batteryMin);
     if (batteryMax) params.set('battery_max', batteryMax);
+    if (batteryVoltageMin) params.set('battery_voltage_min', batteryVoltageMin);
+    if (batteryVoltageMax) params.set('battery_voltage_max', batteryVoltageMax);
     if (temperatureMin) params.set('air_temperature_min', temperatureMin);
     if (temperatureMax) params.set('air_temperature_max', temperatureMax);
+    if (externalTemperatureMin) params.set('external_temperature_min', externalTemperatureMin);
+    if (externalTemperatureMax) params.set('external_temperature_max', externalTemperatureMax);
+    if (humidityMin) params.set('humidity_min', humidityMin);
+    if (humidityMax) params.set('humidity_max', humidityMax);
     if (lightMin) params.set('light_min', lightMin);
     if (lightMax) params.set('light_max', lightMax);
 
@@ -137,11 +152,11 @@ async function fetchMessages() {
     const params = getFilterParams();
 
     const tbody = document.getElementById('messages-tbody');
-    tbody.innerHTML = '<tr><td colspan="22" class="muted">Loading…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="25" class="muted">Loading…</td></tr>';
 
     const resp = await fetch('/api/messages?' + params);
     if (!resp.ok) {
-        tbody.innerHTML = '<tr><td colspan="22" class="muted">Failed to load data.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="25" class="muted">Failed to load data.</td></tr>';
         return;
     }
     const data = await resp.json();
@@ -160,8 +175,14 @@ function clearFilters() {
     document.getElementById('filter-to').value = '';
     document.getElementById('filter-battery-min').value = '';
     document.getElementById('filter-battery-max').value = '';
+    document.getElementById('filter-battery-voltage-min').value = '';
+    document.getElementById('filter-battery-voltage-max').value = '';
     document.getElementById('filter-temperature-min').value = '';
     document.getElementById('filter-temperature-max').value = '';
+    document.getElementById('filter-external-temperature-min').value = '';
+    document.getElementById('filter-external-temperature-max').value = '';
+    document.getElementById('filter-humidity-min').value = '';
+    document.getElementById('filter-humidity-max').value = '';
     document.getElementById('filter-light-min').value = '';
     document.getElementById('filter-light-max').value = '';
     setQuickRangeActive(null);
@@ -220,13 +241,20 @@ function v(val, suffix = '') {
 function batteryBadge(battery) {
     if (battery == null) return '—';
     const cls = battery < 25 ? 'ago-old' : battery < 50 ? 'ago-warn' : 'ago-ok';
-    return `<span class="ago-badge ${cls}">${battery} %</span>`;
+    return `<span class="ago-badge ${cls}">${formatNumber(battery, 1)} %</span>`;
+}
+
+function formatNumber(value, digits = 1) {
+    return Number(value).toFixed(digits).replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
 }
 
 function formatMetricValue(metric, value) {
     if (value == null) return '—';
-    if (metric === 'battery') return `${value} %`;
-    if (metric === 'air_temperature') return `${value} °C`;
+    if (metric === 'battery') return `${formatNumber(value, 1)} %`;
+    if (metric === 'battery_voltage') return `${formatNumber(value, 3)} V`;
+    if (metric === 'air_temperature') return `${formatNumber(value, 2)} °C`;
+    if (metric === 'external_temperature') return `${formatNumber(value, 2)} °C`;
+    if (metric === 'humidity') return `${formatNumber(value, 1)} %`;
     return value;
 }
 
@@ -327,7 +355,7 @@ function renderTable(messages) {
     count.textContent = messages.length ? `${messages.length} row${messages.length !== 1 ? 's' : ''}` : '';
 
     if (!messages.length) {
-        tbody.innerHTML = '<tr><td colspan="22" class="muted">No messages found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="25" class="muted">No messages found.</td></tr>';
         return;
     }
 
@@ -354,7 +382,10 @@ function renderTable(messages) {
             <td class="mono col-hide-mobile">${lat}</td>
             <td class="mono col-hide-mobile">${lon}</td>
             <td>${batteryBadge(m.battery)}</td>
+            <td>${formatMetricValue('battery_voltage', m.battery_voltage)}</td>
             <td>${formatMetricValue('air_temperature', m.air_temperature)}</td>
+            <td>${formatMetricValue('external_temperature', m.external_temperature)}</td>
+            <td>${formatMetricValue('humidity', m.humidity)}</td>
             <td class="col-hide-mobile">${formatMetricValue('light', m.light)}</td>
             <td class="col-hide-mobile">${v(m.positioning_status)}</td>
             <td class="col-hide-mobile">${v(m.event_status)}</td>

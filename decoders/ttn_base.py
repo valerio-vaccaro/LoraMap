@@ -15,7 +15,9 @@ class TTNBaseDecoder(BaseDecoder):
     """
 
     def decode(self, raw: dict) -> Optional[dict]:
-        result = raw.get('result', {})
+        result = raw.get('result') if isinstance(raw, dict) else None
+        if not isinstance(result, dict):
+            result = raw if isinstance(raw, dict) else None
         if not result:
             return None
 

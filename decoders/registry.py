@@ -5,12 +5,14 @@ To add a new decoder:
 2. Import it here and add it to DECODERS.
 """
 from typing import Dict, List, Tuple
+from .dragino_lht65 import DraginoLHT65Decoder
 from .sensecap_t1000a import SensecapT1000ADecoder
 
 DECODERS: Dict = {
     d.NAME: d
     for d in [
         SensecapT1000ADecoder(),
+        DraginoLHT65Decoder(),
     ]
 }
 
