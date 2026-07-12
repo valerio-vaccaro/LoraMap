@@ -127,3 +127,37 @@ class DeviceNamePreference(db.Model):
     __table_args__ = (
         db.UniqueConstraint('user_id', 'device_id', name='uq_device_name_preferences_user_device'),
     )
+
+
+class DeviceAccessToken(db.Model):
+    __tablename__ = 'device_access_tokens'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    name = db.Column(db.String(100), nullable=False)
+    token_hash = db.Column(db.String(64), nullable=False, unique=True)
+    locked = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
+    usage_count = db.Column(db.Integer, nullable=False, default=0, server_default='0')
+    first_used_at = db.Column(db.DateTime)
+    last_used_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'name', name='uq_device_access_tokens_user_name'),
+        db.Index('ix_device_access_tokens_user_id_locked', 'user_id', 'locked'),
+    )
+
+
+class DeviceAccessTokenDevice(db.Model):
+    __tablename__ = 'device_access_token_devices'
+
+    id = db.Column(db.Integer, primary_key=True)
+    token_id = db.Column(db.Integer, db.ForeignKey('device_access_tokens.id', ondelete='CASCADE'), nullable=False, index=True)
+    device_id = db.Column(db.String(100), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('token_id', 'device_id', name='uq_device_access_token_devices_token_device'),
+        db.Index('ix_device_access_token_devices_token_id_device_id', 'token_id', 'device_id'),
+    )

@@ -1,11 +1,12 @@
 openapi: 3.0.3
 info:
   title: LoraMap API
-  version: 1.0.0
+  version: 1.1.0
   description: |
     API documentation for LoraMap.
 
-    Note: most endpoints require an authenticated Flask session (cookie-based login).
+    Most endpoints require an authenticated Flask session cookie.
+    The `/api/access/last_messages` endpoint uses a user-generated access token instead.
 servers:
   - url: /
 security:
@@ -16,6 +17,10 @@ components:
       type: apiKey
       in: cookie
       name: session
+    bearerAccessToken:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
   parameters:
     DevicesParam:
       name: devices
@@ -30,42 +35,116 @@ components:
       required: false
       schema:
         type: string
-      description: Start datetime string. Accepted by backend datetime parser.
+        format: date-time
+      description: Lower bound for `real_timestamp`.
     ToParam:
       name: to
       in: query
       required: false
       schema:
         type: string
-      description: End datetime string. Accepted by backend datetime parser.
+        format: date-time
+      description: Upper bound for `real_timestamp`.
+    BatteryMinParam:
+      name: battery_min
+      in: query
+      required: false
+      schema:
+        type: number
+    BatteryMaxParam:
+      name: battery_max
+      in: query
+      required: false
+      schema:
+        type: number
+    BatteryVoltageMinParam:
+      name: battery_voltage_min
+      in: query
+      required: false
+      schema:
+        type: number
+    BatteryVoltageMaxParam:
+      name: battery_voltage_max
+      in: query
+      required: false
+      schema:
+        type: number
+    AirTemperatureMinParam:
+      name: air_temperature_min
+      in: query
+      required: false
+      schema:
+        type: number
+    AirTemperatureMaxParam:
+      name: air_temperature_max
+      in: query
+      required: false
+      schema:
+        type: number
+    ExternalTemperatureMinParam:
+      name: external_temperature_min
+      in: query
+      required: false
+      schema:
+        type: number
+    ExternalTemperatureMaxParam:
+      name: external_temperature_max
+      in: query
+      required: false
+      schema:
+        type: number
+    HumidityMinParam:
+      name: humidity_min
+      in: query
+      required: false
+      schema:
+        type: number
+    HumidityMaxParam:
+      name: humidity_max
+      in: query
+      required: false
+      schema:
+        type: number
+    LightMinParam:
+      name: light_min
+      in: query
+      required: false
+      schema:
+        type: number
+    LightMaxParam:
+      name: light_max
+      in: query
+      required: false
+      schema:
+        type: number
+    MetricParam:
+      name: metric
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - battery
+          - battery_voltage
+          - air_temperature
+          - external_temperature
+          - humidity
+          - light
+          - positioning_status
+          - event_status
+          - rssi
+          - channel_rssi
+          - snr
+          - channel_index
+          - consumed_airtime
+        default: battery
   schemas:
     ErrorResponse:
       type: object
       properties:
         error:
           type: string
-    StatsResponse:
-      type: object
-      properties:
-        total_messages:
-          type: integer
-        total_devices:
-          type: integer
-        last_week:
-          type: integer
-        last_month:
-          type: integer
-        active_devices:
-          type: integer
-        last_received_at:
-          type: string
-          nullable: true
-          format: date-time
-        last_real_timestamp:
-          type: string
-          nullable: true
-          format: date-time
-    Position:
+    Message:
       type: object
       properties:
         id:
@@ -87,7 +166,16 @@ components:
         battery:
           type: number
           nullable: true
+        battery_voltage:
+          type: number
+          nullable: true
         air_temperature:
+          type: number
+          nullable: true
+        external_temperature:
+          type: number
+          nullable: true
+        humidity:
           type: number
           nullable: true
         light:
@@ -132,22 +220,36 @@ components:
         event_status:
           type: string
           nullable: true
-        latest_air_temperature:
-          type: number
-          nullable: true
-        latest_light:
-          type: number
-          nullable: true
-        latest_positioning_status:
-          type: string
-          nullable: true
-        latest_event_status:
-          type: string
-          nullable: true
         f_cnt:
           type: integer
           nullable: true
-    PositionsResponse:
+    Position:
+      allOf:
+        - $ref: '#/components/schemas/Message'
+        - type: object
+          properties:
+            latest_air_temperature:
+              type: number
+              nullable: true
+            latest_external_temperature:
+              type: number
+              nullable: true
+            latest_humidity:
+              type: number
+              nullable: true
+            latest_battery_voltage:
+              type: number
+              nullable: true
+            latest_light:
+              type: number
+              nullable: true
+            latest_positioning_status:
+              type: string
+              nullable: true
+            latest_event_status:
+              type: string
+              nullable: true
+    PositionResponse:
       type: object
       properties:
         positions:
@@ -171,16 +273,25 @@ components:
           nullable: true
         last_gps_at:
           type: string
-          nullable: true
           format: date-time
+          nullable: true
         last_gps_received_at:
           type: string
-          nullable: true
           format: date-time
+          nullable: true
         last_battery:
           type: number
           nullable: true
+        last_battery_voltage:
+          type: number
+          nullable: true
         last_air_temperature:
+          type: number
+          nullable: true
+        last_external_temperature:
+          type: number
+          nullable: true
+        last_humidity:
           type: number
           nullable: true
         last_light:
@@ -221,12 +332,12 @@ components:
           nullable: true
         last_received_at:
           type: string
-          nullable: true
           format: date-time
+          nullable: true
         last_real_timestamp:
           type: string
-          nullable: true
           format: date-time
+          nullable: true
         seconds_ago:
           type: integer
           nullable: true
@@ -252,7 +363,9 @@ components:
             pattern: '^#[0-9A-F]{6}$'
     SetDeviceColorRequest:
       type: object
-      required: [device_id, color]
+      required:
+        - device_id
+        - color
       properties:
         device_id:
           type: string
@@ -268,6 +381,31 @@ components:
           type: string
         color:
           type: string
+    DeviceNamesResponse:
+      type: object
+      properties:
+        names:
+          type: object
+          additionalProperties:
+            type: string
+    SetDeviceNameRequest:
+      type: object
+      required:
+        - device_id
+      properties:
+        device_id:
+          type: string
+        short_name:
+          type: string
+    SetDeviceNameResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        device_id:
+          type: string
+        short_name:
+          type: string
     ChartPoint:
       type: object
       properties:
@@ -282,7 +420,16 @@ components:
         battery:
           type: number
           nullable: true
+        battery_voltage:
+          type: number
+          nullable: true
         air_temperature:
+          type: number
+          nullable: true
+        external_temperature:
+          type: number
+          nullable: true
+        humidity:
           type: number
           nullable: true
         light:
@@ -303,11 +450,11 @@ components:
         snr:
           type: number
           nullable: true
-        gateway_count:
-          type: integer
-          nullable: true
         channel_index:
           type: integer
+          nullable: true
+        consumed_airtime:
+          type: number
           nullable: true
     ChartDataResponse:
       type: object
@@ -322,18 +469,39 @@ components:
         messages:
           type: array
           items:
-            $ref: '#/components/schemas/Position'
+            $ref: '#/components/schemas/Message'
     MessagesRangeResponse:
       type: object
       properties:
         min:
           type: string
-          nullable: true
           format: date-time
+          nullable: true
         max:
           type: string
-          nullable: true
           format: date-time
+          nullable: true
+    StatsResponse:
+      type: object
+      properties:
+        total_messages:
+          type: integer
+        total_devices:
+          type: integer
+        last_week:
+          type: integer
+        last_month:
+          type: integer
+        active_devices:
+          type: integer
+        last_received_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_real_timestamp:
+          type: string
+          format: date-time
+          nullable: true
     FetchAllResponse:
       type: object
       properties:
@@ -345,10 +513,23 @@ components:
           type: array
           items:
             type: string
+    AccessLastMessagesResponse:
+      type: object
+      properties:
+        token_name:
+          type: string
+        devices:
+          type: array
+          items:
+            type: string
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
 paths:
   /api/stats:
     get:
-      summary: Get global stats
+      summary: Get global installation stats
       security: []
       responses:
         '200':
@@ -357,10 +538,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StatsResponse'
-
   /api/positions:
     get:
-      summary: Get positions
+      summary: Get map/tracker positions
       parameters:
         - $ref: '#/components/parameters/DevicesParam'
         - $ref: '#/components/parameters/FromParam'
@@ -370,36 +550,38 @@ paths:
           required: false
           schema:
             type: boolean
-          description: Return only the latest point per device.
+          description: Return only the latest position per device.
       responses:
         '200':
-          description: Positions payload
+          description: Position payload
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PositionsResponse'
+                $ref: '#/components/schemas/PositionResponse'
         '401':
           description: Unauthorized
-
   /api/devices:
     get:
-      summary: Get device summaries
+      summary: Get per-device summary data for the dashboard
+      parameters:
+        - $ref: '#/components/parameters/DevicesParam'
+        - $ref: '#/components/parameters/FromParam'
+        - $ref: '#/components/parameters/ToParam'
       responses:
         '200':
-          description: Device list
+          description: Device summaries
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DevicesResponse'
         '401':
           description: Unauthorized
-
   /api/device_colors:
     get:
-      summary: Get saved device colors for current user
+      summary: Get saved device colors for the current user
       responses:
         '200':
-          description: Map of device_id to color
+          description: Color map
           content:
             application/json:
               schema:
@@ -407,7 +589,7 @@ paths:
         '401':
           description: Unauthorized
     post:
-      summary: Save device color for current user
+      summary: Save a device color for the current user
       requestBody:
         required: true
         content:
@@ -429,25 +611,66 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
-
+  /api/device_names:
+    get:
+      summary: Get saved device short names for the current user
+      responses:
+        '200':
+          description: Name map
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceNamesResponse'
+        '401':
+          description: Unauthorized
+    post:
+      summary: Save a device short name for the current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetDeviceNameRequest'
+      responses:
+        '200':
+          description: Name saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetDeviceNameResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
   /api/chart_data:
     get:
-      summary: Get chart points for one metric
+      summary: Get time-series data for one metric
       parameters:
         - name: device_id
           in: query
           required: false
           schema:
             type: string
-        - name: metric
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [battery, air_temperature, light, positioning_status, event_status, rssi, channel_rssi, snr, channel_index]
-            default: battery
+          description: Filter to one device.
+        - $ref: '#/components/parameters/MetricParam'
         - $ref: '#/components/parameters/FromParam'
         - $ref: '#/components/parameters/ToParam'
+        - $ref: '#/components/parameters/BatteryMinParam'
+        - $ref: '#/components/parameters/BatteryMaxParam'
+        - $ref: '#/components/parameters/BatteryVoltageMinParam'
+        - $ref: '#/components/parameters/BatteryVoltageMaxParam'
+        - $ref: '#/components/parameters/AirTemperatureMinParam'
+        - $ref: '#/components/parameters/AirTemperatureMaxParam'
+        - $ref: '#/components/parameters/ExternalTemperatureMinParam'
+        - $ref: '#/components/parameters/ExternalTemperatureMaxParam'
+        - $ref: '#/components/parameters/HumidityMinParam'
+        - $ref: '#/components/parameters/HumidityMaxParam'
+        - $ref: '#/components/parameters/LightMinParam'
+        - $ref: '#/components/parameters/LightMaxParam'
       responses:
         '200':
           description: Chart data
@@ -463,10 +686,9 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
-
   /api/messages/range:
     get:
-      summary: Get min/max message timestamps
+      summary: Get min/max message timestamps for current user data
       responses:
         '200':
           description: Range payload
@@ -476,14 +698,25 @@ paths:
                 $ref: '#/components/schemas/MessagesRangeResponse'
         '401':
           description: Unauthorized
-
   /api/messages:
     get:
-      summary: Get messages
+      summary: Get messages for the current user
       parameters:
         - $ref: '#/components/parameters/DevicesParam'
         - $ref: '#/components/parameters/FromParam'
         - $ref: '#/components/parameters/ToParam'
+        - $ref: '#/components/parameters/BatteryMinParam'
+        - $ref: '#/components/parameters/BatteryMaxParam'
+        - $ref: '#/components/parameters/BatteryVoltageMinParam'
+        - $ref: '#/components/parameters/BatteryVoltageMaxParam'
+        - $ref: '#/components/parameters/AirTemperatureMinParam'
+        - $ref: '#/components/parameters/AirTemperatureMaxParam'
+        - $ref: '#/components/parameters/ExternalTemperatureMinParam'
+        - $ref: '#/components/parameters/ExternalTemperatureMaxParam'
+        - $ref: '#/components/parameters/HumidityMinParam'
+        - $ref: '#/components/parameters/HumidityMaxParam'
+        - $ref: '#/components/parameters/LightMinParam'
+        - $ref: '#/components/parameters/LightMaxParam'
       responses:
         '200':
           description: Messages payload
@@ -493,10 +726,42 @@ paths:
                 $ref: '#/components/schemas/MessagesResponse'
         '401':
           description: Unauthorized
-
+  /api/access/last_messages:
+    get:
+      summary: Get the latest message for one or more devices using an access token
+      security:
+        - bearerAccessToken: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/DevicesParam'
+        - name: token
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Alternative to `Authorization: Bearer <token>` or `X-Access-Token`."
+      responses:
+        '200':
+          description: Latest messages for allowed devices. If `devices` is omitted, returns the latest message for every device allowed by the token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessLastMessagesResponse'
+        '401':
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invalid token, locked token, or unauthorized device request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/fetch_all:
     post:
-      summary: Trigger fetch from all enabled data sources for current user
+      summary: Trigger fetch from all enabled data sources for the current user
       responses:
         '200':
           description: Fetch completed
@@ -505,7 +770,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/FetchAllResponse'
         '400':
-          description: No enabled data sources
+          description: No enabled data sources configured
           content:
             application/json:
               schema:

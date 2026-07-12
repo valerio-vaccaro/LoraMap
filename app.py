@@ -1,4 +1,6 @@
 import subprocess
+import secrets
+import hashlib
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file
@@ -15,6 +17,8 @@ from models import (
     UplinkMessage,
     DeviceColorPreference,
     DeviceNamePreference,
+    DeviceAccessToken,
+    DeviceAccessTokenDevice,
 )
 from utils import parse_and_store, parse_lines, parse_datetime
 from decoders.registry import DECODER_CHOICES
@@ -34,7 +38,7 @@ def _get_version() -> str:
 
 
 APP_VERSION = _get_version()
-DEVICE_COLORS = {
+DEVICE_COLOR_LIST = [
     '#E53935', '#1E88E5', '#43A047', '#F4511E', '#8E24AA', '#00ACC1', '#FB8C00', '#D81B60',
     '#6D4C41', '#546E7A', '#7CB342', '#3949AB', '#00897B', '#C0CA33', '#5E35B1', '#FDD835',
     '#8D6E63', '#5C6BC0', '#26A69A', '#9CCC65', '#FF7043', '#EC407A', '#AB47BC', '#29B6F6',
@@ -43,7 +47,8 @@ DEVICE_COLORS = {
     '#4E342E', '#37474F', '#558B2F', '#283593', '#00695C', '#9E9D24', '#4527A0', '#F9A825',
     '#A1887F', '#7986CB', '#4DB6AC', '#AED581', '#FF8A65', '#F48FB1', '#CE93D8', '#81D4FA',
     '#A5D6A7', '#FFE082', '#FFCC80', '#E0E0E0', '#90A4AE', '#80DEEA', '#E6EE9C', '#EF9A9A',
-}
+]
+DEVICE_COLORS = set(DEVICE_COLOR_LIST)
 
 
 def _airtime_milliseconds(value):
@@ -219,8 +224,103 @@ def profile():
     total_devices = db.session.query(
         func.count(UplinkMessage.device_id.distinct())
     ).filter(UplinkMessage.datasource_id.in_(ds_ids)).scalar()
+    device_rows = db.session.query(UplinkMessage.device_id).filter(
+        UplinkMessage.datasource_id.in_(ds_ids)
+    ).distinct().order_by(UplinkMessage.device_id.asc()).all()
+    color_rows = DeviceColorPreference.query.filter_by(user_id=current_user.id).all()
+    name_rows = DeviceNamePreference.query.filter_by(user_id=current_user.id).all()
+    custom_colors = {row.device_id: row.color for row in color_rows}
+    custom_names = {row.device_id: row.short_name for row in name_rows}
+    access_tokens = DeviceAccessToken.query.filter_by(user_id=current_user.id).order_by(
+        DeviceAccessToken.created_at.desc()
+    ).all()
+    token_devices = {
+        token.id: [
+            {
+                'device_id': device_id,
+                'short_name': custom_names.get(device_id) or device_id,
+                'color': _get_device_color(device_id, custom_colors),
+            }
+            for device_id in sorted(
+                device.device_id for device in DeviceAccessTokenDevice.query.filter_by(token_id=token.id).all()
+            )
+        ]
+        for token in access_tokens
+    }
+    available_devices = [
+        {
+            'device_id': device_id,
+            'short_name': custom_names.get(device_id) or device_id,
+            'color': _get_device_color(device_id, custom_colors),
+        }
+        for (device_id,) in device_rows
+    ]
     return render_template('profile.html', sources=sources,
-                           total_messages=total_messages, total_devices=total_devices)
+                           total_messages=total_messages, total_devices=total_devices,
+                           available_devices=available_devices,
+                           access_tokens=access_tokens,
+                           token_devices=token_devices,
+                           new_access_token=session.pop('new_access_token', None))
+
+
+@app.route('/profile/access-tokens/create', methods=['POST'])
+@login_required
+def create_access_token():
+    name = request.form.get('name', '').strip()
+    device_ids = sorted({value.strip() for value in request.form.getlist('device_ids') if value.strip()})
+    if not name:
+        flash('Token name is required.', 'error')
+        return redirect(url_for('profile'))
+    if not device_ids:
+        flash('Select at least one allowed device.', 'error')
+        return redirect(url_for('profile'))
+
+    allowed_devices = set(_user_device_ids(current_user.id))
+    if not set(device_ids).issubset(allowed_devices):
+        flash('One or more selected devices are not available in your account.', 'error')
+        return redirect(url_for('profile'))
+
+    existing = DeviceAccessToken.query.filter_by(user_id=current_user.id, name=name).first()
+    if existing:
+        flash('A token with this name already exists.', 'error')
+        return redirect(url_for('profile'))
+
+    raw_token = secrets.token_urlsafe(24)
+    token = DeviceAccessToken(
+        user_id=current_user.id,
+        name=name,
+        token_hash=_hash_access_token(raw_token),
+        locked=False,
+    )
+    db.session.add(token)
+    db.session.flush()
+    for device_id in device_ids:
+        db.session.add(DeviceAccessTokenDevice(token_id=token.id, device_id=device_id))
+    db.session.commit()
+
+    session['new_access_token'] = raw_token
+    flash('Access token created. Copy it now: it will not be shown again.', 'success')
+    return redirect(url_for('profile'))
+
+
+@app.route('/profile/access-tokens/<int:token_id>/toggle-lock', methods=['POST'])
+@login_required
+def toggle_access_token_lock(token_id):
+    token = DeviceAccessToken.query.filter_by(id=token_id, user_id=current_user.id).first_or_404()
+    token.locked = not token.locked
+    db.session.commit()
+    flash(f'Token "{token.name}" {"locked" if token.locked else "unlocked"}.', 'success')
+    return redirect(url_for('profile'))
+
+
+@app.route('/profile/access-tokens/<int:token_id>/delete', methods=['POST'])
+@login_required
+def delete_access_token(token_id):
+    token = DeviceAccessToken.query.filter_by(id=token_id, user_id=current_user.id).first_or_404()
+    db.session.delete(token)
+    db.session.commit()
+    flash(f'Token "{token.name}" deleted.', 'success')
+    return redirect(url_for('profile'))
 
 
 @app.route('/datasources', methods=['GET', 'POST'])
@@ -702,6 +802,57 @@ def api_messages():
     return jsonify({'messages': [_msg_to_dict(m) for m in messages]})
 
 
+@app.route('/api/access/last_messages')
+def api_access_last_messages():
+    raw_token = _extract_access_token(request)
+    if not raw_token:
+        return jsonify({'error': 'Access token is required'}), 401
+
+    token = DeviceAccessToken.query.filter_by(token_hash=_hash_access_token(raw_token)).first()
+    if not token or token.locked:
+        return jsonify({'error': 'Invalid or locked access token'}), 403
+
+    allowed_devices = sorted(
+        device.device_id for device in DeviceAccessTokenDevice.query.filter_by(token_id=token.id).all()
+    )
+    if not allowed_devices:
+        _record_access_token_usage(token)
+        return jsonify({'messages': [], 'devices': []})
+
+    requested_param = request.args.get('devices', '').strip()
+    requested_devices = sorted({value.strip() for value in requested_param.split(',') if value.strip()}) if requested_param else []
+    if requested_devices:
+        unauthorized = [device_id for device_id in requested_devices if device_id not in allowed_devices]
+        if unauthorized:
+            return jsonify({'error': 'One or more requested devices are not allowed for this token'}), 403
+        target_devices = requested_devices
+    else:
+        target_devices = allowed_devices
+
+    ds_ids = _user_ds_ids_for_user(token.user_id)
+    if not ds_ids:
+        _record_access_token_usage(token)
+        return jsonify({'messages': [], 'devices': target_devices})
+
+    rows = UplinkMessage.query.filter(
+        UplinkMessage.datasource_id.in_(ds_ids),
+        UplinkMessage.device_id.in_(target_devices),
+    ).order_by(UplinkMessage.device_id.asc(), UplinkMessage.real_timestamp.desc()).all()
+
+    latest_by_device = {}
+    for row in rows:
+        if row.device_id not in latest_by_device:
+            latest_by_device[row.device_id] = row
+
+    messages = [_msg_to_dict(latest_by_device[device_id]) for device_id in target_devices if device_id in latest_by_device]
+    _record_access_token_usage(token)
+    return jsonify({
+        'token_name': token.name,
+        'devices': target_devices,
+        'messages': messages,
+    })
+
+
 @app.route('/api/fetch_all', methods=['POST'])
 @login_required
 def api_fetch_all():
@@ -732,7 +883,54 @@ def api_fetch_all():
 
 def _user_ds_ids():
     """Return list of datasource IDs belonging to the current user."""
-    return [ds.id for ds in DataSource.query.filter_by(user_id=current_user.id).with_entities(DataSource.id).all()]
+    return _user_ds_ids_for_user(current_user.id)
+
+
+def _user_ds_ids_for_user(user_id):
+    return [ds.id for ds in DataSource.query.filter_by(user_id=user_id).with_entities(DataSource.id).all()]
+
+
+def _user_device_ids(user_id):
+    ds_ids = _user_ds_ids_for_user(user_id)
+    if not ds_ids:
+        return []
+    rows = db.session.query(UplinkMessage.device_id).filter(
+        UplinkMessage.datasource_id.in_(ds_ids)
+    ).distinct().all()
+    return [device_id for (device_id,) in rows]
+
+
+def _hash_access_token(raw_token):
+    return hashlib.sha256(str(raw_token).encode('utf-8')).hexdigest()
+
+
+def _get_device_color(device_id, custom_colors=None):
+    custom = (custom_colors or {}).get(device_id)
+    normalized = custom.strip().upper() if isinstance(custom, str) else None
+    if normalized in DEVICE_COLORS:
+        return normalized
+
+    key = str(device_id or '')
+    hash_value = 0
+    for char in key:
+        hash_value = ((hash_value * 31) + ord(char)) & 0xFFFFFFFF
+    return DEVICE_COLOR_LIST[hash_value % len(DEVICE_COLOR_LIST)]
+
+
+def _extract_access_token(req):
+    header = req.headers.get('Authorization', '').strip()
+    if header.lower().startswith('bearer '):
+        return header[7:].strip()
+    return req.args.get('token', '').strip() or req.headers.get('X-Access-Token', '').strip()
+
+
+def _record_access_token_usage(token):
+    now = datetime.utcnow()
+    token.usage_count = (token.usage_count or 0) + 1
+    if token.first_used_at is None:
+        token.first_used_at = now
+    token.last_used_at = now
+    db.session.commit()
 
 
 def _apply_message_filters(query, devices='', from_time='', to_time=''):

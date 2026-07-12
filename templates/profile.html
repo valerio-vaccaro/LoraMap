@@ -6,6 +6,17 @@
 <div class="dashboard-container" style="max-width: 700px;">
     <h2 class="page-title">Profile</h2>
 
+    {% if new_access_token %}
+    <section class="card">
+        <h3 class="card-title">New Access Token</h3>
+        <p class="small" style="margin-bottom:0.75rem;">This token is shown only once. Store it securely.</p>
+        <div class="table-wrapper" style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+            <code class="mono" id="new-access-token">{{ new_access_token }}</code>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="copyNewAccessToken()">Copy token</button>
+        </div>
+    </section>
+    {% endif %}
+
     <!-- Account form -->
     <section class="card">
         <h3 class="card-title">Account information</h3>
@@ -124,5 +135,150 @@
         <p class="muted" style="margin-top: 0.75rem;">No data sources configured yet.</p>
         {% endif %}
     </section>
+
+    <section class="card">
+        <h3 class="card-title">Device Access Tokens</h3>
+        <form method="post" action="{{ url_for('create_access_token') }}">
+            <div class="form-group">
+                <label for="token-name">Token name</label>
+                <input type="text" id="token-name" name="name" class="input-sm" maxlength="100" required placeholder="Warehouse monitor">
+            </div>
+            <div class="form-group">
+                <label>Allowed devices</label>
+                <div class="action-cell" style="margin-bottom:0.6rem;">
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="selectAllTokenDevices()">Select all</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="selectNoTokenDevices()">Select none</button>
+                </div>
+                <div class="token-device-picker {% if not available_devices %}is-disabled{% endif %}" id="token-device-picker">
+                    {% for device in available_devices %}
+                    <label class="token-device-option">
+                        <input type="checkbox" name="device_ids" value="{{ device.device_id }}" checked {% if not available_devices %}disabled{% endif %}>
+                        <span class="token-device-option-body">
+                            <span class="device-color-dot" style="background:{{ device.color }}"></span>
+                            <span class="token-device-option-text">
+                                <strong>{{ device.short_name }}</strong>
+                                {% if device.short_name != device.device_id %}
+                                <span class="mono small">{{ device.device_id }}</span>
+                                {% endif %}
+                            </span>
+                            <span class="mono small">{{ device.color }}</span>
+                        </span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="small muted" style="margin-top:0.35rem;">Select one or more devices. Each entry shows short name, device ID, and color.</div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" {% if not available_devices %}disabled{% endif %}>Create token</button>
+            </div>
+        </form>
+
+        {% if access_tokens %}
+        <div class="table-wrapper" style="margin-top: 1rem;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Status</th>
+                        <th>Usage</th>
+                        <th>First used</th>
+                        <th>Last used</th>
+                        <th>Allowed devices</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for token in access_tokens %}
+                    <tr>
+                        <td><strong>{{ token.name }}</strong></td>
+                        <td>
+                            {% if token.locked %}
+                            <span class="ago-badge ago-old">locked</span>
+                            {% else %}
+                            <span class="ago-badge ago-ok">active</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ token.usage_count }}</td>
+                        <td class="mono small">{{ token.first_used_at.strftime('%Y-%m-%d %H:%M') if token.first_used_at else '—' }}</td>
+                        <td class="mono small">{{ token.last_used_at.strftime('%Y-%m-%d %H:%M') if token.last_used_at else '—' }}</td>
+                        <td class="small">
+                            {% if token_devices.get(token.id) %}
+                                {% for device in token_devices.get(token.id, []) %}
+                                <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.2rem;">
+                                    <span class="device-color-dot" style="background:{{ device.color }}"></span>
+                                    <strong>{{ device.short_name }}</strong>
+                                    {% if device.short_name != device.device_id %}
+                                    <span class="mono small">{{ device.device_id }}</span>
+                                    {% endif %}
+                                    <span class="mono small">{{ device.color }}</span>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td class="mono small">{{ token.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td class="action-cell">
+                            <form method="post" action="{{ url_for('toggle_access_token_lock', token_id=token.id) }}" style="display:inline">
+                                <button type="submit" class="btn btn-secondary btn-sm">{{ 'Unlock' if token.locked else 'Lock' }}</button>
+                            </form>
+                            <form method="post" action="{{ url_for('delete_access_token', token_id=token.id) }}" style="display:inline" onsubmit="return confirm('Delete this access token?')">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="small muted" style="margin-top:0.75rem;">External access endpoint: <code class="mono">/api/access/last_messages</code> with <code class="mono">Authorization: Bearer &lt;token&gt;</code> or <code class="mono">?token=&lt;token&gt;</code>. Without a <code class="mono">devices=...</code> filter it returns the latest message for every allowed device. Optional filter: <code class="mono">devices=deviceA,deviceB</code>.</p>
+        <div class="table-wrapper" style="margin-top:0.75rem;">
+            <pre class="mono small" style="margin:0; white-space:pre-wrap;">curl \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  "{{ request.url_root.rstrip('/') }}/api/access/last_messages"
+
+curl \
+  "{{ request.url_root.rstrip('/') }}/api/access/last_messages?token=YOUR_TOKEN&devices=deviceA,deviceB"</pre>
+        </div>
+        {% else %}
+        <p class="muted" style="margin-top: 0.75rem;">No access tokens created yet.</p>
+        {% endif %}
+    </section>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function copyNewAccessToken() {
+    const el = document.getElementById('new-access-token');
+    if (!el) return;
+    const text = el.textContent.trim();
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        document.execCommand('copy');
+        sel.removeAllRanges();
+    }
+}
+
+function setTokenDeviceSelection(checked) {
+    document.querySelectorAll('#token-device-picker input[type="checkbox"]').forEach(el => {
+        if (!el.disabled) el.checked = checked;
+    });
+}
+
+function selectAllTokenDevices() {
+    setTokenDeviceSelection(true);
+}
+
+function selectNoTokenDevices() {
+    setTokenDeviceSelection(false);
+}
+</script>
 {% endblock %}

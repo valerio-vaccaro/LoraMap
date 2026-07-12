@@ -1,198 +1,275 @@
-# 📡 LoraMap
+# LoraMap
 
-An authenticated web platform that visualises LoRa device positions on a live map, built with **Flask · SQLAlchemy · Google Maps**.
+Authenticated Flask application for LoRa device tracking, telemetry storage, and per-user device dashboards.
 
----
+## Features
 
-## ✨ Features
+- Cookie-based user authentication with manual account activation
+- Google Maps position view and tracker view
+- Dashboard with latest per-device status and charts
+- `Sensors` page with filters, charts, and tables for:
+  - battery percentage
+  - battery voltage
+  - internal temperature
+  - external temperature
+  - humidity
+  - luminosity
+- TTN HTTP Storage API ingestion with deduplication
+- Pluggable decoder system per datasource
+- User-specific device colors and short names
+- User-generated access tokens for latest-message access to selected devices only
 
-| | |
-|---|---|
-| 🔐 | Cookie-based login / register — new accounts require manual DB activation |
-| 🗺️ | Google Maps view — full trajectory **or** last-position-only, one colour per device |
-| 🔍 | Filter by device and time range; click any marker for details (battery, RSSI, SF, BW…) |
-| 📊 | Dashboard table with last-known state per device + live battery & RSSI charts |
-| 📥 | TTN HTTP Storage API integration — fetch and store uplink messages with deduplication |
-| 🔌 | Pluggable decoder system — each data source selects its own device decoder |
-| 🖥️ | CLI ingestion script for bulk-loading NDJSON files |
+## Supported decoders
 
----
+- `sensecap_t1000a` → SenseCap T1000-A/B (TTN)
+- `dragino_lht65` → Dragino LHT65 (TTN)
 
-## 🚀 Quick Start
+The Dragino LHT65 decoder maps:
 
-### 1 · Install dependencies
+- `air_temperature` = internal `TempC_SHT`
+- `external_temperature` = `TempC_DS`
+- `humidity` = `Hum_SHT`
+- `battery_voltage` = `BatV`
+- `battery` = `last_battery_percentage.value` when available, otherwise a voltage-based estimate
+
+## Quick start
+
+### 1. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2 · Configure environment
+### 2. Configure environment
 
-```bash
-cp .env.example .env
-# edit .env: set DATABASE_URL, SECRET_KEY, GOOGLE_MAPS_API_KEY
+Create `.env` and set at least:
+
+```env
+SECRET_KEY=change-me
+DATABASE_URL=sqlite:///loramap.db
+GOOGLE_MAPS_API_KEY=
 ```
 
-> **SQLite (zero-config):** leave `DATABASE_URL` as `sqlite:///loramap.db`
-> **MySQL:** create the DB first (`CREATE DATABASE loramap;`) then set `DATABASE_URL=mysql+pymysql://user:pass@localhost/loramap`
+Notes:
 
-### 3 · Initialise the database
+- SQLite works out of the box.
+- For MySQL, create the database first and use a SQLAlchemy URL such as `mysql+pymysql://user:pass@localhost/loramap`.
+
+### 3. Apply database migrations
 
 ```bash
 flask db upgrade
 ```
 
-### 4 · Run
+This is required for the latest changes, including:
+
+- extra LHT65 sensor columns
+- performance indexes
+- device access token tables
+
+### 4. Run the app
 
 ```bash
 flask run
 ```
 
-Open [http://localhost:5000](http://localhost:5000).
+Open `http://localhost:5000`.
 
----
+## User accounts
 
-## 👤 User accounts
+1. Register at `/register`
+2. Activate the user manually in the database
 
-1. Register at `/register`.
-2. An admin must activate the account:
-   ```sql
-   UPDATE users SET activated = 1 WHERE username = 'yourname';
-   ```
-3. Log in — done.
+```sql
+UPDATE users SET activated = 1 WHERE username = 'yourname';
+```
 
----
+3. Log in
 
-## 📥 Data sources
+## Datasources
 
-Go to **Sources** in the nav bar and add a TTN HTTP Storage endpoint.
+Add datasources from the `Sources` page.
 
-| Field | Example |
-|-------|---------|
-| 📛 Name | `My Tracker App` |
-| 🔗 API URL | `https://eu1.cloud.thethings.network/api/v3/as/applications/<app-id>/packages/storage/uplink_message` |
-| 🔑 Bearer Token | `NNSXS.…` |
-| ⏱️ Time Window | `12h`, `24h`, `7d` |
-| 🔌 Device / Decoder | e.g. *SenseCap T1000-A/B (TTN)* |
+Required fields:
 
-Click **↻ Fetch** to pull data immediately, or use **Fetch New Data** on the map page.
+- `Name`
+- `API URL`
+- `Bearer Token`
 
----
+Optional/config fields:
 
-## 📦 Bulk ingestion (CLI)
+- `Time Window` like `12h`, `24h`, `7d`
+- `Device / Decoder`
+
+Example TTN storage URL:
+
+```text
+https://eu1.cloud.thethings.network/api/v3/as/applications/<app-id>/packages/storage/uplink_message
+```
+
+## Sensor page
+
+The `Sensors` page shows telemetry rows and charts with shared filters:
+
+- device
+- time range
+- battery min/max
+- battery voltage min/max
+- internal temperature min/max
+- external temperature min/max
+- humidity min/max
+- luminosity min/max
+
+## Access tokens for latest device messages
+
+Users can create named random tokens from the `Profile` page.
+
+Each token:
+
+- belongs to exactly one user
+- can be locked/unlocked
+- can be deleted
+- is restricted to an explicit allowlist of that user’s devices
+- cannot access devices belonging to other users
+
+The raw token is shown once at creation time only. The database stores only a SHA-256 hash.
+
+### External endpoint
+
+```text
+GET /api/access/last_messages
+```
+
+Authentication methods:
+
+- `Authorization: Bearer <token>`
+- `X-Access-Token: <token>`
+- query string `?token=<token>`
+
+Optional device filter:
+
+```text
+?devices=deviceA,deviceB
+```
+
+Behavior:
+
+- if no `devices` filter is passed, the endpoint returns the latest message for every device allowed by the token
+- if `devices` is passed, every requested device must be inside the token allowlist
+- locked or invalid tokens return `403`
+
+Example:
 
 ```bash
-# from a file
-python ingest.py data.ndjson
+curl \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  "http://localhost:5000/api/access/last_messages?devices=device-1,device-2"
+```
 
-# from stdin (pipe the TTN curl command)
-curl -G "https://…" \
-     -H "Authorization: Bearer …" \
-     -H "Accept: text/event-stream" \
-     -d "last=12h" \
+Example returning the latest messages for all devices allowed by the token:
+
+```bash
+TOKEN="paste_the_token_shown_once_in_profile"
+
+curl \
+  -H "Authorization: Bearer ${TOKEN}" \
+  "http://localhost:5000/api/access/last_messages"
+```
+
+Example using query-string auth and a single selected device:
+
+```bash
+curl \
+  "http://localhost:5000/api/access/last_messages?token=${TOKEN}&devices=a840412ad182d40a"
+```
+
+## API notes
+
+The OpenAPI document is in [docs/openapi.yaml](docs/openapi.yaml).
+
+Main authenticated endpoints:
+
+- `/api/stats`
+- `/api/positions`
+- `/api/devices`
+- `/api/device_colors`
+- `/api/device_names`
+- `/api/chart_data`
+- `/api/messages/range`
+- `/api/messages`
+- `/api/fetch_all`
+
+Token-authenticated endpoint:
+
+- `/api/access/last_messages`
+
+## Bulk ingestion
+
+From a file:
+
+```bash
+python ingest.py data.ndjson
+```
+
+From TTN storage streamed NDJSON:
+
+```bash
+curl -G "https://..." \
+  -H "Authorization: Bearer ..." \
+  -H "Accept: text/event-stream" \
+  -d "last=12h" \
   | python ingest.py
 ```
 
----
+Note:
 
-## 🔌 Decoder system
+- the normal ingestion path expects line-delimited JSON / TTN storage output
+- TTN-style bare uplink objects are supported by TTN decoders
 
-Each data source has a **decoder type** that controls how raw uplink payloads are parsed. This makes it easy to support multiple device models.
+## Decoder architecture
 
-### 📂 Package layout
+Relevant files:
 
-```
+```text
 decoders/
-├── __init__.py
-├── base.py            BaseDecoder — abstract interface (decode → dict | None)
-├── ttn_base.py        TTNBaseDecoder — shared TTN envelope + radio metadata
-├── sensecap_t1000a.py SensecapT1000ADecoder — SenseCap T1000-A/B payload
-└── registry.py        DECODERS dict · get_decoder() · DECODER_CHOICES
+├── base.py
+├── ttn_base.py
+├── sensecap_t1000a.py
+├── dragino_lht65.py
+└── registry.py
 ```
 
-### ➕ Adding a new decoder
+- `BaseDecoder` defines the normalized output contract
+- `TTNBaseDecoder` handles TTN envelope parsing and radio metadata
+- each datasource selects one decoder type
+- decoder registry controls the dropdown choices shown in the UI
 
-1. Create `decoders/mydevice.py`:
+To add a new decoder:
 
-```python
-from .ttn_base import TTNBaseDecoder   # or BaseDecoder for non-TTN sources
+1. Create a module in `decoders/`
+2. Return normalized fields from `decode()` or `_decode_payload()`
+3. Register it in `decoders/registry.py`
 
-class MyDeviceDecoder(TTNBaseDecoder):
-    NAME  = 'my_device'
-    LABEL = 'My Device (TTN)'
+## Project structure
 
-    def _decode_payload(self, uplink: dict) -> dict | None:
-        decoded = uplink.get('decoded_payload') or {}
-        return {
-            'latitude':  decoded.get('lat'),
-            'longitude': decoded.get('lon'),
-            'battery':   decoded.get('battery'),
-        }
-```
-
-2. Register it in `decoders/registry.py`:
-
-```python
-from .mydevice import MyDeviceDecoder
-
-DECODERS = {
-    d.NAME: d for d in [
-        SensecapT1000ADecoder(),
-        MyDeviceDecoder(),        # ← add here
-    ]
-}
-```
-
-The new decoder appears automatically in the **Data Sources** dropdown — no other changes needed.
-
-### 📡 SenseCap T1000-A/B measurement IDs
-
-| ID | Meaning |
-|----|---------|
-| `4197` | 📍 Longitude |
-| `4198` | 📍 Latitude |
-| `3000` | 🔋 Battery (%) |
-| `3576` | 📶 Positioning Status |
-
-RSSI comes from `rx_metadata[0].rssi`; spreading factor and bandwidth from `settings.data_rate.lora`.
-
----
-
-## 🗂️ Project structure
-
-```
+```text
 LoraMap/
-├── app.py               Flask application & routes
-├── models.py            SQLAlchemy models (User · DataSource · UplinkMessage)
-├── utils.py             NDJSON parser & DB ingestion helpers
-├── config.py            Configuration (reads .env)
-├── ingest.py            CLI ingestion script
-├── decoders/            Pluggable device decoders (see above)
-├── migrations/          Flask-Migrate / Alembic versions
-├── requirements.txt
-├── .env.example
+├── app.py
+├── models.py
+├── utils.py
+├── config.py
+├── ingest.py
+├── decoders/
+├── docs/
+│   └── openapi.yaml
+├── migrations/
+├── static/
 ├── templates/
-│   ├── base.html
-│   ├── login.html
-│   ├── register.html
-│   ├── map.html
-│   ├── dashboard.html
-│   ├── datasources.html
-│   ├── data.html
-│   └── profile.html
-└── static/
-    ├── css/style.css
-    └── js/
-        ├── map.js
-        └── dashboard.js
+└── requirements.txt
 ```
 
----
+## Environment variables
 
-## ⚙️ Environment variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SECRET_KEY` | `dev-secret-key-…` | Flask session secret — **change in production** |
-| `DATABASE_URL` | `sqlite:///loramap.db` | SQLAlchemy DB URI |
-| `GOOGLE_MAPS_API_KEY` | *(empty)* | Google Maps JavaScript API key |
+- `SECRET_KEY`: Flask session secret
+- `DATABASE_URL`: SQLAlchemy database URL
+- `GOOGLE_MAPS_API_KEY`: Google Maps JS API key

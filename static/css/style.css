@@ -779,6 +779,58 @@ body.dashboard-page { display: flex; flex-direction: column; }
     display: inline-block;
 }
 
+.token-device-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.6rem;
+}
+
+.token-device-picker.is-disabled {
+    opacity: 0.65;
+}
+
+.token-device-option {
+    display: block;
+    cursor: pointer;
+}
+
+.token-device-option input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.token-device-option-body {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    min-height: 52px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.token-device-option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.token-device-option input[type="checkbox"]:checked + .token-device-option-body {
+    border-color: var(--primary);
+    background: var(--surface-2);
+    box-shadow: 0 0 0 2px rgba(30, 136, 229, 0.12);
+}
+
+.token-device-option input[type="checkbox"]:focus-visible + .token-device-option-body {
+    outline: 2px solid rgba(30, 136, 229, 0.45);
+    outline-offset: 2px;
+}
+
 .color-grid {
     margin-top: 0.35rem;
     padding: 0.5rem;
