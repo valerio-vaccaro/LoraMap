@@ -509,9 +509,10 @@ def api_positions():
             'event_status',
         ):
             column = getattr(UplinkMessage, field)
-            latest = device_query.filter(
-                column.isnot(None),
-            ).order_by(UplinkMessage.real_timestamp.desc()).first()
+            latest_query = device_query.filter(column.isnot(None))
+            if field in ('air_temperature', 'external_temperature'):
+                latest_query = latest_query.filter(column <= 100)
+            latest = latest_query.order_by(UplinkMessage.real_timestamp.desc()).first()
             latest_values[device_id][field] = getattr(latest, field) if latest else None
 
     for position in positions:
@@ -575,9 +576,11 @@ def api_devices():
         ).order_by(UplinkMessage.real_timestamp.desc()).first()
         last_temperature = base.filter(
             UplinkMessage.air_temperature.isnot(None),
+            UplinkMessage.air_temperature <= 100,
         ).order_by(UplinkMessage.real_timestamp.desc()).first()
         last_external_temperature = base.filter(
             UplinkMessage.external_temperature.isnot(None),
+            UplinkMessage.external_temperature <= 100,
         ).order_by(UplinkMessage.real_timestamp.desc()).first()
         last_humidity = base.filter(
             UplinkMessage.humidity.isnot(None),
@@ -739,6 +742,8 @@ def api_chart_data():
         UplinkMessage.datasource_id.in_(ds_ids),
         col.isnot(None),
     )
+    if metric in ('air_temperature', 'external_temperature'):
+        query = query.filter(col <= 100)
     query = _apply_message_filters(
         query,
         devices=device_id,
@@ -751,7 +756,7 @@ def api_chart_data():
 
     data = []
     for message in messages:
-        value = getattr(message, metric)
+        value = _clean_temperature_value(metric, getattr(message, metric))
         if metric == 'consumed_airtime':
             value = _airtime_milliseconds(value)
         if value is None:
@@ -1022,8 +1027,8 @@ def _msg_to_dict(m):
         'longitude': m.longitude,
         'battery': m.battery,
         'battery_voltage': m.battery_voltage,
-        'air_temperature': m.air_temperature,
-        'external_temperature': m.external_temperature,
+        'air_temperature': _clean_temperature_value('air_temperature', m.air_temperature),
+        'external_temperature': _clean_temperature_value('external_temperature', m.external_temperature),
         'humidity': m.humidity,
         'light': m.light,
         'rssi': m.rssi,
@@ -1041,6 +1046,16 @@ def _msg_to_dict(m):
         'event_status': m.event_status,
         'f_cnt': m.f_cnt,
     }
+
+
+def _clean_temperature_value(field_name, value):
+    if field_name not in ('air_temperature', 'external_temperature'):
+        return value
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return value
+    return None if numeric > 100.0 else value
 
 
 # ---------------------------------------------------------------------------
