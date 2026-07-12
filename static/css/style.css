@@ -640,6 +640,15 @@ body.dashboard-page { display: flex; flex-direction: column; }
     height: 520px;
 }
 
+.chart-wrapper-compact {
+    height: 320px;
+}
+
+.filter-bar input.input-sm {
+    min-width: 0;
+    width: 100%;
+}
+
 .mono {
     font-family: 'Consolas', 'Menlo', monospace;
     font-size: 0.82rem;

@@ -612,17 +612,12 @@ def api_chart_data():
         UplinkMessage.datasource_id.in_(ds_ids),
         col.isnot(None),
     )
-
-    if device_id:
-        query = query.filter(UplinkMessage.device_id == device_id)
-    if from_time:
-        dt = parse_datetime(from_time)
-        if dt:
-            query = query.filter(UplinkMessage.real_timestamp >= dt)
-    if to_time:
-        dt = parse_datetime(to_time)
-        if dt:
-            query = query.filter(UplinkMessage.real_timestamp <= dt)
+    query = _apply_message_filters(
+        query,
+        devices=device_id,
+        from_time=from_time,
+        to_time=to_time,
+    )
 
     query = query.order_by(UplinkMessage.real_timestamp.asc())
     messages = query.all()
@@ -668,21 +663,12 @@ def api_messages():
     to_time = request.args.get('to', '')
 
     query = UplinkMessage.query.filter(UplinkMessage.datasource_id.in_(ds_ids))
-
-    if devices_param:
-        device_list = [d.strip() for d in devices_param.split(',') if d.strip()]
-        if device_list:
-            query = query.filter(UplinkMessage.device_id.in_(device_list))
-
-    if from_time:
-        dt = parse_datetime(from_time)
-        if dt:
-            query = query.filter(UplinkMessage.real_timestamp >= dt)
-
-    if to_time:
-        dt = parse_datetime(to_time)
-        if dt:
-            query = query.filter(UplinkMessage.real_timestamp <= dt)
+    query = _apply_message_filters(
+        query,
+        devices=devices_param,
+        from_time=from_time,
+        to_time=to_time,
+    )
 
     query = query.order_by(UplinkMessage.real_timestamp.desc())
     messages = query.all()
@@ -721,6 +707,46 @@ def api_fetch_all():
 def _user_ds_ids():
     """Return list of datasource IDs belonging to the current user."""
     return [ds.id for ds in DataSource.query.filter_by(user_id=current_user.id).with_entities(DataSource.id).all()]
+
+
+def _apply_message_filters(query, devices='', from_time='', to_time=''):
+    if devices:
+        device_list = [d.strip() for d in devices.split(',') if d.strip()]
+        if device_list:
+            query = query.filter(UplinkMessage.device_id.in_(device_list))
+
+    if from_time:
+        dt = parse_datetime(from_time)
+        if dt:
+            query = query.filter(UplinkMessage.real_timestamp >= dt)
+
+    if to_time:
+        dt = parse_datetime(to_time)
+        if dt:
+            query = query.filter(UplinkMessage.real_timestamp <= dt)
+
+    for field_name in ('battery', 'air_temperature', 'light'):
+        min_value = _parse_float_arg(request.args.get(f'{field_name}_min', ''))
+        max_value = _parse_float_arg(request.args.get(f'{field_name}_max', ''))
+        column = getattr(UplinkMessage, field_name)
+        if min_value is not None:
+            query = query.filter(column >= min_value)
+        if max_value is not None:
+            query = query.filter(column <= max_value)
+
+    return query
+
+
+def _parse_float_arg(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return float(text)
+    except (TypeError, ValueError):
+        return None
 
 
 def _fetch_from_ttn(ds):

@@ -2,6 +2,11 @@
 {% block title %}Data — LoraMap{% endblock %}
 {% block body_class %}dashboard-page{% endblock %}
 
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+{% endblock %}
+
 {% block content %}
 <div class="dashboard-container">
     <h2 class="page-title">All Messages</h2>
@@ -35,6 +40,30 @@
                 <label for="filter-to">To</label>
                 <input type="datetime-local" id="filter-to" class="input-sm">
             </div>
+            <div class="form-group">
+                <label for="filter-battery-min">Battery Min (%)</label>
+                <input type="number" id="filter-battery-min" class="input-sm" step="0.1" placeholder="Any">
+            </div>
+            <div class="form-group">
+                <label for="filter-battery-max">Battery Max (%)</label>
+                <input type="number" id="filter-battery-max" class="input-sm" step="0.1" placeholder="Any">
+            </div>
+            <div class="form-group">
+                <label for="filter-temperature-min">Temperature Min (°C)</label>
+                <input type="number" id="filter-temperature-min" class="input-sm" step="0.1" placeholder="Any">
+            </div>
+            <div class="form-group">
+                <label for="filter-temperature-max">Temperature Max (°C)</label>
+                <input type="number" id="filter-temperature-max" class="input-sm" step="0.1" placeholder="Any">
+            </div>
+            <div class="form-group">
+                <label for="filter-light-min">Luminosity Min</label>
+                <input type="number" id="filter-light-min" class="input-sm" step="0.1" placeholder="Any">
+            </div>
+            <div class="form-group">
+                <label for="filter-light-max">Luminosity Max</label>
+                <input type="number" id="filter-light-max" class="input-sm" step="0.1" placeholder="Any">
+            </div>
             <div class="form-group filter-actions">
                 <button class="btn btn-secondary" onclick="applyFilters()">Apply</button>
                 <button class="btn btn-ghost" onclick="clearFilters()">Clear</button>
@@ -45,6 +74,31 @@
             </div>
         </div>
     </section>
+
+    <div class="charts-grid">
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Battery (%)</h3>
+            </div>
+            <div class="chart-wrapper chart-wrapper-compact"><canvas id="chart-battery"></canvas></div>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Temperature (°C)</h3>
+            </div>
+            <div class="chart-wrapper chart-wrapper-compact"><canvas id="chart-air_temperature"></canvas></div>
+        </section>
+    </div>
+
+    <div class="charts-grid charts-grid-single">
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Luminosity</h3>
+            </div>
+            <div class="chart-wrapper chart-wrapper-compact"><canvas id="chart-light"></canvas></div>
+        </section>
+    </div>
 
     <!-- Messages table -->
     <section class="card">
