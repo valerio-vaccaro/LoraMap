@@ -7,7 +7,7 @@ from urllib.parse import urljoin
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file, Response
 from flask_migrate import Migrate
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from sqlalchemy import func
+from sqlalchemy import func, or_
 import requests as http_requests
 
 from config import Config
@@ -185,6 +185,7 @@ def robots_txt():
         'User-agent: *',
         'Allow: /',
         'Disallow: /api/',
+        'Disallow: /sensors',
         'Disallow: /map',
         'Disallow: /tracker',
         'Disallow: /dashboard',
@@ -247,10 +248,18 @@ def dashboard():
     return render_template('dashboard.html')
 
 
+@app.route('/sensors')
+@login_required
+def sensors_view():
+    sources = DataSource.query.filter_by(user_id=current_user.id).order_by(DataSource.name).all()
+    return render_template('sensors.html', sources=sources)
+
+
 @app.route('/data')
 @login_required
 def data_view():
-    return render_template('data.html')
+    sources = DataSource.query.filter_by(user_id=current_user.id).order_by(DataSource.name).all()
+    return render_template('data.html', sources=sources)
 
 
 @app.route('/api-docs')
@@ -854,6 +863,59 @@ def api_messages_range():
     })
 
 
+@app.route('/api/filter_bounds')
+@login_required
+def api_filter_bounds():
+    ds_ids = _user_ds_ids()
+    devices_param = request.args.get('devices', '')
+    from_time = request.args.get('from', '')
+    to_time = request.args.get('to', '')
+
+    scoped_query = UplinkMessage.query.filter(UplinkMessage.datasource_id.in_(ds_ids))
+    scoped_query = _apply_message_filters(
+        scoped_query,
+        devices=devices_param,
+        from_time=from_time,
+        to_time=to_time,
+        include_numeric_filters=False,
+    )
+
+    result = db.session.query(
+        func.min(UplinkMessage.real_timestamp),
+        func.max(UplinkMessage.real_timestamp),
+    ).filter(UplinkMessage.id.in_(scoped_query.with_entities(UplinkMessage.id))).one()
+    min_dt, max_dt = result
+
+    bounds = {
+        'real_timestamp': {
+            'min': min_dt.isoformat() if min_dt else None,
+            'max': max_dt.isoformat() if max_dt else None,
+        },
+    }
+    numeric_fields = (
+        'battery',
+        'battery_voltage',
+        'air_temperature',
+        'external_temperature',
+        'humidity',
+        'light',
+    )
+    for field_name in numeric_fields:
+        field_query = scoped_query.filter(getattr(UplinkMessage, field_name).isnot(None))
+        if field_name in ('air_temperature', 'external_temperature'):
+            field_query = field_query.filter(getattr(UplinkMessage, field_name) <= 100)
+        min_value, max_value = db.session.query(
+            func.min(getattr(UplinkMessage, field_name)),
+            func.max(getattr(UplinkMessage, field_name)),
+        ).filter(UplinkMessage.id.in_(field_query.with_entities(UplinkMessage.id))).one()
+        bounds[field_name] = {
+            'min': min_value,
+            'max': max_value,
+        }
+
+    return jsonify(bounds)
+
+
 @app.route('/api/messages')
 @login_required
 def api_messages():
@@ -861,6 +923,8 @@ def api_messages():
     devices_param = request.args.get('devices', '')
     from_time = request.args.get('from', '')
     to_time = request.args.get('to', '')
+    page = _parse_int_arg(request.args.get('page'), default=1, minimum=1)
+    per_page = _parse_int_arg(request.args.get('per_page'), default=50, minimum=1, maximum=250)
 
     query = UplinkMessage.query.filter(UplinkMessage.datasource_id.in_(ds_ids))
     query = _apply_message_filters(
@@ -870,10 +934,29 @@ def api_messages():
         to_time=to_time,
     )
 
-    query = query.order_by(UplinkMessage.real_timestamp.desc())
-    messages = query.all()
+    total = query.count()
+    query = query.order_by(UplinkMessage.real_timestamp.desc(), UplinkMessage.id.desc())
+    messages = query.offset((page - 1) * per_page).limit(per_page).all()
+    source_map = {
+        ds.id: ds.name
+        for ds in DataSource.query.filter(
+            DataSource.user_id == current_user.id,
+            DataSource.id.in_({message.datasource_id for message in messages if message.datasource_id is not None}),
+        ).all()
+    }
+    payload = []
+    for message in messages:
+        item = _msg_to_dict(message)
+        item['datasource_name'] = source_map.get(message.datasource_id, '—')
+        payload.append(item)
 
-    return jsonify({'messages': [_msg_to_dict(m) for m in messages]})
+    return jsonify({
+        'messages': payload,
+        'page': page,
+        'per_page': per_page,
+        'total': total,
+        'pages': (total + per_page - 1) // per_page if total else 0,
+    })
 
 
 @app.route('/api/access/last_messages')
@@ -1007,15 +1090,31 @@ def _record_access_token_usage(token):
     db.session.commit()
 
 
-def _apply_message_filters(query, devices='', from_time='', to_time=''):
+def _apply_message_filters(query, devices='', from_time='', to_time='', include_numeric_filters=True):
     if devices:
         device_list = [d.strip() for d in devices.split(',') if d.strip()]
         if device_list:
             query = query.filter(UplinkMessage.device_id.in_(device_list))
 
+    datasource_id = str(request.args.get('datasource_id', '')).strip()
+    if datasource_id.isdigit():
+        query = query.filter(UplinkMessage.datasource_id == int(datasource_id))
+
     board = str(request.args.get('board', '')).strip()
     if board:
         query = query.filter(UplinkMessage.device_model == board)
+
+    search = str(request.args.get('search', '')).strip()
+    if search:
+        pattern = f'%{search}%'
+        query = query.filter(or_(
+            UplinkMessage.device_id.ilike(pattern),
+            UplinkMessage.device_model.ilike(pattern),
+            UplinkMessage.gateway_id.ilike(pattern),
+            UplinkMessage.gateway_eui.ilike(pattern),
+            UplinkMessage.positioning_status.ilike(pattern),
+            UplinkMessage.event_status.ilike(pattern),
+        ))
 
     if from_time:
         dt = parse_datetime(from_time)
@@ -1027,21 +1126,22 @@ def _apply_message_filters(query, devices='', from_time='', to_time=''):
         if dt:
             query = query.filter(UplinkMessage.real_timestamp <= dt)
 
-    for field_name in (
-        'battery',
-        'battery_voltage',
-        'air_temperature',
-        'external_temperature',
-        'humidity',
-        'light',
-    ):
-        min_value = _parse_float_arg(request.args.get(f'{field_name}_min', ''))
-        max_value = _parse_float_arg(request.args.get(f'{field_name}_max', ''))
-        column = getattr(UplinkMessage, field_name)
-        if min_value is not None:
-            query = query.filter(column >= min_value)
-        if max_value is not None:
-            query = query.filter(column <= max_value)
+    if include_numeric_filters:
+        for field_name in (
+            'battery',
+            'battery_voltage',
+            'air_temperature',
+            'external_temperature',
+            'humidity',
+            'light',
+        ):
+            min_value = _parse_float_arg(request.args.get(f'{field_name}_min', ''))
+            max_value = _parse_float_arg(request.args.get(f'{field_name}_max', ''))
+            column = getattr(UplinkMessage, field_name)
+            if min_value is not None:
+                query = query.filter(or_(column.is_(None), column >= min_value))
+            if max_value is not None:
+                query = query.filter(or_(column.is_(None), column <= max_value))
 
     return query
 
@@ -1056,6 +1156,18 @@ def _parse_float_arg(value):
         return float(text)
     except (TypeError, ValueError):
         return None
+
+
+def _parse_int_arg(value, default, minimum=None, maximum=None):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = default
+    if minimum is not None:
+        parsed = max(minimum, parsed)
+    if maximum is not None:
+        parsed = min(maximum, parsed)
+    return parsed
 
 
 def _fetch_from_ttn(ds):
@@ -1087,6 +1199,7 @@ def _fetch_from_ttn(ds):
 def _msg_to_dict(m):
     return {
         'id': m.id,
+        'datasource_id': m.datasource_id,
         'device_id': m.device_id,
         'device_model': m.device_model,
         'received_at': m.received_at.isoformat(),

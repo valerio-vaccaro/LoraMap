@@ -876,6 +876,21 @@ body.content-page { display: flex; flex-direction: column; }
 /* ── Tables ──────────────────────────────────────────────────────────────── */
 .table-wrapper { overflow-x: auto; }
 
+.pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+    flex-wrap: wrap;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
 .device-summary-cards {
     display: none;
 }
@@ -903,6 +918,83 @@ body.content-page { display: flex; flex-direction: column; }
     padding: 0.65rem 0.75rem;
     border-bottom: 1px solid var(--border);
     vertical-align: middle;
+}
+
+.table-device-cell {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    min-width: 150px;
+}
+
+.table-device-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.table-device-board {
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    line-height: 1.2;
+}
+
+.table-location-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.table-battery-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    align-items: flex-start;
+}
+
+.table-battery-voltage {
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    line-height: 1.2;
+}
+
+.table-environment-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    font-size: 0.76rem;
+    line-height: 1.2;
+}
+
+.table-status-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    font-size: 0.76rem;
+    line-height: 1.2;
+}
+
+.table-radio-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    font-size: 0.76rem;
+    line-height: 1.2;
+}
+
+.table-gateway-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.table-lora-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    font-size: 0.76rem;
+    line-height: 1.2;
 }
 
 .data-table tbody tr:last-child td { border-bottom: none; }

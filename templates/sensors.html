@@ -1,14 +1,19 @@
 {% extends 'base.html' %}
-{% block title %}Data — LoraMap{% endblock %}
+{% block title %}Sensors — LoraMap{% endblock %}
 {% block body_class %}dashboard-page{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+{% endblock %}
 
 {% block content %}
 <div class="dashboard-container">
-    <h2 class="page-title">Data</h2>
+    <h2 class="page-title">Sensors</h2>
 
     <section class="card">
         <div class="card-header">
-            <h3 class="card-title">Dataset Filters</h3>
+            <h3 class="card-title">Filters</h3>
         </div>
         <div class="filter-bar">
             <div class="form-group">
@@ -31,10 +36,6 @@
                 <select id="filter-board" class="select-sm">
                     <option value="">All boards</option>
                 </select>
-            </div>
-            <div class="form-group">
-                <label for="filter-search">Search</label>
-                <input type="text" id="filter-search" class="input-sm" placeholder="Device, gateway, status">
             </div>
             <div class="form-group">
                 <label>Quick Range</label>
@@ -101,15 +102,6 @@
                 <label for="filter-light-max">Luminosity Max</label>
                 <input type="number" id="filter-light-max" class="input-sm" step="0.1" placeholder="Any">
             </div>
-            <div class="form-group">
-                <label for="filter-per-page">Rows per page</label>
-                <select id="filter-per-page" class="select-sm">
-                    <option value="25">25</option>
-                    <option value="50" selected>50</option>
-                    <option value="100">100</option>
-                    <option value="250">250</option>
-                </select>
-            </div>
             <div class="form-group filter-actions">
                 <button class="btn btn-secondary" onclick="applyFilters()">Apply</button>
                 <button class="btn btn-ghost" onclick="clearFilters()">Clear</button>
@@ -121,47 +113,57 @@
         </div>
     </section>
 
-    <section class="card">
-        <div class="card-header">
-            <h3 class="card-title">Full Dataset</h3>
-            <span id="row-count" class="muted small"></span>
-        </div>
-        <div class="pagination-bar">
-            <div id="pagination-summary" class="muted small">Loading…</div>
-            <div class="pagination-controls">
-                <button id="page-prev" class="btn btn-ghost btn-sm" onclick="changePage(-1)">Previous</button>
-                <span id="page-indicator" class="mono small">Page 1 / 1</span>
-                <button id="page-next" class="btn btn-ghost btn-sm" onclick="changePage(1)">Next</button>
+    <div class="charts-grid">
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Battery (%)</h3>
             </div>
-        </div>
-        <div class="table-wrapper">
-            <table class="data-table" id="messages-table">
-                <thead>
-                    <tr>
-                        <th>Source</th>
-                        <th>Received (UTC)</th>
-                        <th>Real Time (UTC)</th>
-                        <th>Device</th>
-                        <th class="col-hide-mobile">Frame #</th>
-                        <th class="col-hide-mobile">Location</th>
-                        <th>Battery</th>
-                        <th>Environment</th>
-                        <th class="col-hide-mobile">Status</th>
-                        <th>Radio</th>
-                        <th class="col-hide-mobile">Gateway</th>
-                        <th class="col-hide-mobile">LoRa</th>
-                    </tr>
-                </thead>
-                <tbody id="messages-tbody">
-                    <tr><td colspan="12" class="muted">Loading…</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
+            <div class="chart-wrapper chart-wrapper-compact"><canvas id="chart-battery"></canvas></div>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Battery Voltage (V)</h3>
+            </div>
+            <div class="chart-wrapper chart-wrapper-compact"><canvas id="chart-battery_voltage"></canvas></div>
+        </section>
+    </div>
+
+    <div class="charts-grid">
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Internal Temperature (°C)</h3>
+            </div>
+            <div class="chart-wrapper chart-wrapper-compact"><canvas id="chart-air_temperature"></canvas></div>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">External Temperature (°C)</h3>
+            </div>
+            <div class="chart-wrapper chart-wrapper-compact"><canvas id="chart-external_temperature"></canvas></div>
+        </section>
+    </div>
+
+    <div class="charts-grid">
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Humidity (%)</h3>
+            </div>
+            <div class="chart-wrapper chart-wrapper-compact"><canvas id="chart-humidity"></canvas></div>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <h3 class="card-title">Luminosity</h3>
+            </div>
+            <div class="chart-wrapper chart-wrapper-compact"><canvas id="chart-light"></canvas></div>
+        </section>
+    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/data_table.js') }}"></script>
-<script>loadDataTable();</script>
+<script src="{{ url_for('static', filename='js/sensors.js') }}"></script>
+<script>loadSensors();</script>
 {% endblock %}
