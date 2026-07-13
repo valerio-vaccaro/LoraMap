@@ -3,7 +3,8 @@ import secrets
 import hashlib
 from pathlib import Path
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file
+from urllib.parse import urljoin
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file, Response
 from flask_migrate import Migrate
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from sqlalchemy import func
@@ -77,11 +78,16 @@ app.config.from_object(Config)
 db.init_app(app)
 app.jinja_env.globals['app_version'] = APP_VERSION
 OPENAPI_PATH = Path(__file__).resolve().parent / 'docs' / 'openapi.yaml'
+PUBLIC_SITEMAP_ENDPOINTS = ('login', 'register')
 
 
 @app.context_processor
 def inject_globals():
-    return {'now': datetime.utcnow()}
+    return {
+        'now': datetime.utcnow(),
+        'allow_indexing': request.endpoint in PUBLIC_SITEMAP_ENDPOINTS,
+        'canonical_url': _canonical_url(),
+    }
 migrate = Migrate(app, db)
 
 login_manager = LoginManager(app)
@@ -92,6 +98,21 @@ login_manager.login_message = 'Please log in to access this page.'
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+
+def _site_root() -> str:
+    configured = app.config.get('SITE_URL', '').strip()
+    if configured:
+        return configured.rstrip('/') + '/'
+    return request.url_root
+
+
+def _canonical_url() -> str:
+    return urljoin(_site_root(), request.path.lstrip('/'))
+
+
+def _sitemap_url(endpoint: str) -> str:
+    return urljoin(_site_root(), url_for(endpoint).lstrip('/'))
 
 
 # ---------------------------------------------------------------------------
@@ -155,6 +176,53 @@ def register():
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+
+@app.route('/robots.txt')
+def robots_txt():
+    sitemap_url = urljoin(_site_root(), 'sitemap.xml')
+    body = '\n'.join((
+        'User-agent: *',
+        'Allow: /',
+        'Disallow: /api/',
+        'Disallow: /map',
+        'Disallow: /tracker',
+        'Disallow: /dashboard',
+        'Disallow: /data',
+        'Disallow: /api-docs',
+        'Disallow: /openapi.yaml',
+        'Disallow: /profile',
+        'Disallow: /datasources',
+        'Disallow: /logout',
+        f'Sitemap: {sitemap_url}',
+        '',
+    ))
+    return Response(body, mimetype='text/plain')
+
+
+@app.route('/sitemap.xml')
+def sitemap_xml():
+    now = datetime.utcnow().date().isoformat()
+    items = [
+        ('login', 'monthly', '0.8'),
+        ('register', 'monthly', '0.6'),
+    ]
+    xml_lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ]
+    for endpoint, changefreq, priority in items:
+        xml_lines.extend((
+            '  <url>',
+            f'    <loc>{_sitemap_url(endpoint)}</loc>',
+            f'    <lastmod>{now}</lastmod>',
+            f'    <changefreq>{changefreq}</changefreq>',
+            f'    <priority>{priority}</priority>',
+            '  </url>',
+        ))
+    xml_lines.append('</urlset>')
+    xml_lines.append('')
+    return Response('\n'.join(xml_lines), mimetype='application/xml')
 
 
 # ---------------------------------------------------------------------------
