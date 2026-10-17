@@ -66,10 +66,12 @@ function seenCell(seconds) {
 }
 
 function comfortCell(temperature, humidity) {
-    if (temperature == null || humidity == null) return '<td class="boxes-empty">—</td>';
+    if (temperature == null) return '<td class="boxes-empty">—</td>';
     const temp = Number(temperature);
+    if (!Number.isFinite(temp)) return '<td class="boxes-empty">—</td>';
+    if (humidity == null) return temperatureOnlyCell(temp);
     const hum = Number(humidity);
-    if (!Number.isFinite(temp) || !Number.isFinite(hum)) return '<td class="boxes-empty">—</td>';
+    if (!Number.isFinite(hum)) return temperatureOnlyCell(temp);
     if (temp <= 0) return comfortBadge('bad', '🧊', 'Freezing', temp, hum);
     if (temp <= 10) return comfortBadge('bad', '🥶', 'Cold', temp, hum);
     if (temp >= 35) return comfortBadge('bad', '🥵', 'Extreme heat', temp, hum);
@@ -84,8 +86,21 @@ function comfortCell(temperature, humidity) {
     return comfortBadge(level, icon, label, temp, hum);
 }
 
-function comfortBadge(level, icon, label, temperature, humidity) {
-    return `<td><span class="box-reading box-${level} box-comfort" title="${label}: ${temperature.toFixed(1)} °C, ${humidity.toFixed(1)}% humidity" aria-label="${label}">${icon} ${label}</span></td>`;
+function temperatureOnlyCell(temp) {
+    if (temp <= 0) return comfortBadge('bad', '🧊', 'Freezing', temp, null, true);
+    if (temp <= 10) return comfortBadge('bad', '🥶', 'Cold', temp, null, true);
+    if (temp >= 35) return comfortBadge('bad', '🥵', 'Extreme heat', temp, null, true);
+    if (temp >= 30) return comfortBadge('bad', '🔥', 'Hot', temp, null, true);
+    if (temp >= 18 && temp <= 26) return comfortBadge('good', '🙂', 'Good', temp, null, true);
+    if (temp >= 16 && temp <= 28) return comfortBadge('warn', '😐', 'Fair', temp, null, true);
+    return comfortBadge('bad', '😟', 'Uncomfortable', temp, null, true);
+}
+
+function comfortBadge(level, icon, label, temperature, humidity, temperatureOnly = false) {
+    const detail = temperatureOnly
+        ? `${label} based on temperature only: ${temperature.toFixed(1)} °C`
+        : `${label}: ${temperature.toFixed(1)} °C, ${humidity.toFixed(1)}% humidity`;
+    return `<td><span class="box-reading box-${level} box-comfort" title="${detail}" aria-label="${detail}">${icon} ${label}</span></td>`;
 }
 
 function boxAge(seconds) {
