@@ -1,13 +1,13 @@
 """add LAQ4 air quality fields
 
 Revision ID: f7b8c9d0e1f2
-Revises: d4e5f6a7b8c9
+Revises: a4b5c6d7e8f9
 """
 from alembic import op
 import sqlalchemy as sa
 
 revision = 'f7b8c9d0e1f2'
-down_revision = 'd4e5f6a7b8c9'
+down_revision = 'a4b5c6d7e8f9'
 branch_labels = None
 depends_on = None
 

@@ -51,6 +51,8 @@ async function loadSensors() {
     await refreshSensorCharts();
 }
 
+window.addEventListener('loramap-theme-change', () => refreshSensorCharts());
+
 async function loadSensorCustomColors() {
     try {
         const resp = await fetch('/api/device_colors');
@@ -360,21 +362,23 @@ async function updateChart(metric) {
                             month: 'MMM yyyy',
                         },
                     },
-                    title: { display: true, text: 'Time', color: '#757575' },
-                    grid: { color: '#F0F0F0' },
+                    title: { display: true, text: 'Time', color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() },
+                    ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() },
+                    grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() },
                 },
                 y: {
                     title: {
                         display: true,
                         text: def.unit ? `${def.label.replace(' Over Time', '')} (${def.unit})` : def.label.replace(' Over Time', ''),
-                        color: '#757575',
+                        color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim(),
                     },
-                    grid: { color: '#F0F0F0' },
+                    ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() },
+                    grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() },
                 },
             },
             plugins: {
                 legend: { position: 'top' },
-                title: { display: true, text: def.label, font: { size: 13 }, color: '#424242' },
+                title: { display: true, text: def.label, font: { size: 13 }, color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() },
                 tooltip: {
                     callbacks: {
                         label(context) {

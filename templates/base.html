@@ -8,6 +8,12 @@
     <link rel="canonical" href="{{ canonical_url }}">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script>
+    (function () {
+        const theme = localStorage.getItem('loramap-theme') || 'light';
+        document.documentElement.dataset.theme = theme === 'dark' ? 'dark' : 'light';
+    })();
+    </script>
     {% block head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -17,6 +23,7 @@
         <span class="brand-icon">📡</span> LoraMap
     </a>
     <span id="nav-clock" class="nav-clock"></span>
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to dark mode" onclick="toggleTheme()">🌙 Dark</button>
     {% if current_user.is_authenticated %}
     <div class="navbar-links">
         <a href="{{ url_for('map_view') }}" class="nav-link {% if request.endpoint == 'map_view' %}active{% endif %}">Map</a>
@@ -55,6 +62,23 @@
 
 {% block scripts %}{% endblock %}
 <script>
+(function () {
+    const button = document.getElementById('theme-toggle');
+    function syncThemeButton() {
+        const dark = document.documentElement.dataset.theme === 'dark';
+        button.textContent = dark ? '☀️ Light' : '🌙 Dark';
+        button.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+        button.setAttribute('aria-pressed', String(dark));
+    }
+    window.toggleTheme = function () {
+        const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        localStorage.setItem('loramap-theme', next);
+        syncThemeButton();
+        window.dispatchEvent(new Event('loramap-theme-change'));
+    };
+    syncThemeButton();
+})();
 (function () {
     function tick() {
         const now = new Date();

@@ -118,6 +118,8 @@ async function loadDashboard() {
     await refreshDashboard();
 }
 
+window.addEventListener('loramap-theme-change', () => refreshDashboard());
+
 async function refreshDashboard() {
     const params = getFilterParams();
     const resp = await fetch('/api/devices?' + params);
@@ -566,18 +568,20 @@ async function updateChart(metric) {
                             month: 'MMM yyyy',
                         },
                     },
-                    title: { display: true, text: 'Time', color: '#757575' },
-                    grid: { color: '#F0F0F0' },
+                    title: { display: true, text: 'Time', color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() },
+                    ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() },
+                    grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() },
                 },
                 y: {
                     type: def.categorical ? 'category' : 'linear',
-                    title: { display: true, text: yLabel, color: '#757575' },
-                    grid: { color: '#F0F0F0' },
+                    title: { display: true, text: yLabel, color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() },
+                    ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() },
+                    grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() },
                 },
             },
             plugins: {
                 legend: { position: 'top' },
-                title: { display: true, text: def.label, font: { size: 13 }, color: '#424242' },
+                title: { display: true, text: def.label, font: { size: 13 }, color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() },
             },
         },
     });

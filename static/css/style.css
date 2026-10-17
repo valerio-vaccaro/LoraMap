@@ -21,6 +21,63 @@
     --radius:        8px;
 }
 
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --primary:       #64B5F6;
+    --primary-dark:  #42A5F5;
+    --primary-light: #263B50;
+    --accent:        #4FC3F7;
+    --bg:            #111820;
+    --surface:       #1B2530;
+    --surface-2:     #24313E;
+    --text:          #E6EDF3;
+    --text-muted:    #A4B1BE;
+    --border:        #354453;
+    --navbar-bg:     #101820;
+    --navbar-text:   #F4F7FA;
+    --success:       #66BB6A;
+    --error:         #EF5350;
+    --warning:       #FFB74D;
+}
+
+:root[data-theme="dark"] body { color-scheme: dark; }
+:root[data-theme="dark"] .auth-container { background: linear-gradient(135deg, #101820 0%, #17324A 100%); }
+:root[data-theme="dark"] .btn-secondary { background: #263B50; color: #BBDEFB; }
+:root[data-theme="dark"] .btn-secondary:hover:not(:disabled) { background: #304B63; }
+:root[data-theme="dark"] .btn-danger { background: #48282B; color: #FFCDD2; }
+:root[data-theme="dark"] .btn-danger:hover:not(:disabled) { background: #5A3035; }
+:root[data-theme="dark"] .btn-warning { background: #4A3922; color: #FFE0B2; }
+:root[data-theme="dark"] .btn-success { background: #243D2C; color: #C8E6C9; }
+:root[data-theme="dark"] .flash-success { background: #20392A; color: #C8E6C9; }
+:root[data-theme="dark"] .flash-error { background: #432629; color: #FFCDD2; }
+:root[data-theme="dark"] .flash-warning { background: #45371F; color: #FFE0B2; }
+:root[data-theme="dark"] .flash-info { background: #20384B; color: #BBDEFB; }
+:root[data-theme="dark"] .ago-ok { background: #243D2C; color: #C8E6C9; }
+:root[data-theme="dark"] .ago-warn { background: #45371F; color: #FFE0B2; }
+:root[data-theme="dark"] .ago-old { background: #432629; color: #FFCDD2; }
+:root[data-theme="dark"] .env-temperature { background: #453323; color: #FFCC80; }
+:root[data-theme="dark"] .env-light { background: #403D22; color: #FFF59D; }
+:root[data-theme="dark"] .map-legend,
+:root[data-theme="dark"] .leaflet-popup-content-wrapper,
+:root[data-theme="dark"] .leaflet-popup-tip { background: var(--surface); color: var(--text); }
+
+.theme-toggle {
+    flex: 0 0 auto;
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    background: rgba(255,255,255,0.1);
+    color: var(--navbar-text);
+    font: inherit;
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+.theme-toggle:hover { background: rgba(255,255,255,0.2); }
+
+@media (max-width: 760px) {
+    .theme-toggle { margin-left: auto; }
+}
+
 /* ── Reset ───────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
