@@ -24,6 +24,8 @@ const SENSOR_CHART_DEFS = {
     external_temperature: { label: 'External Temperature Over Time', unit: '°C' },
     humidity: { label: 'Humidity Over Time', unit: '%' },
     light: { label: 'Luminosity Over Time', unit: '' },
+    co2_ppm: { label: 'CO₂ Over Time', unit: 'ppm' },
+    tvoc_ppb: { label: 'TVOC Over Time', unit: 'ppb' },
 };
 const SENSOR_BOUND_FIELDS = {
     battery: { min: 'filter-battery-min', max: 'filter-battery-max', digits: 1 },

@@ -580,6 +580,7 @@ def api_positions():
             'air_temperature',
             'external_temperature',
             'humidity',
+            'co2_ppm', 'tvoc_ppb', 'work_mode', 'alarm_status',
             'battery_voltage',
             'light',
             'positioning_status',
@@ -665,6 +666,10 @@ def api_devices():
         last_light = base.filter(
             UplinkMessage.light.isnot(None),
         ).order_by(UplinkMessage.real_timestamp.desc()).first()
+        last_co2 = base.filter(UplinkMessage.co2_ppm.isnot(None)).order_by(UplinkMessage.real_timestamp.desc()).first()
+        last_tvoc = base.filter(UplinkMessage.tvoc_ppb.isnot(None)).order_by(UplinkMessage.real_timestamp.desc()).first()
+        last_work_mode = base.filter(UplinkMessage.work_mode.isnot(None)).order_by(UplinkMessage.real_timestamp.desc()).first()
+        last_alarm = base.filter(UplinkMessage.alarm_status.isnot(None)).order_by(UplinkMessage.real_timestamp.desc()).first()
         last_positioning_status = base.filter(
             UplinkMessage.positioning_status.isnot(None),
         ).order_by(UplinkMessage.real_timestamp.desc()).first()
@@ -696,6 +701,10 @@ def api_devices():
             ),
             'last_humidity': last_humidity.humidity if last_humidity else None,
             'last_light': last_light.light if last_light else None,
+            'last_co2_ppm': last_co2.co2_ppm if last_co2 else None,
+            'last_tvoc_ppb': last_tvoc.tvoc_ppb if last_tvoc else None,
+            'last_work_mode': last_work_mode.work_mode if last_work_mode else None,
+            'last_alarm_status': last_alarm.alarm_status if last_alarm else None,
             'last_positioning_status': (
                 last_positioning_status.positioning_status
                 if last_positioning_status else None
@@ -808,7 +817,7 @@ def api_chart_data():
 
     allowed_metrics = {
         'battery', 'battery_voltage', 'air_temperature', 'external_temperature',
-        'humidity', 'light', 'positioning_status', 'event_status',
+        'humidity', 'light', 'co2_ppm', 'tvoc_ppb', 'positioning_status', 'event_status',
         'rssi', 'channel_rssi', 'snr', 'channel_index', 'consumed_airtime',
     }
     if metric not in allowed_metrics:
@@ -898,6 +907,7 @@ def api_filter_bounds():
         'air_temperature',
         'external_temperature',
         'humidity',
+        'co2_ppm', 'tvoc_ppb',
         'light',
     )
     for field_name in numeric_fields:
@@ -1211,6 +1221,10 @@ def _msg_to_dict(m):
         'air_temperature': _clean_temperature_value('air_temperature', m.air_temperature),
         'external_temperature': _clean_temperature_value('external_temperature', m.external_temperature),
         'humidity': m.humidity,
+        'co2_ppm': m.co2_ppm,
+        'tvoc_ppb': m.tvoc_ppb,
+        'work_mode': m.work_mode,
+        'alarm_status': m.alarm_status,
         'light': m.light,
         'rssi': m.rssi,
         'channel_rssi': m.channel_rssi,

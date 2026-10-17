@@ -269,6 +269,14 @@ function statusValues(positioningStatus, eventStatus) {
     </div>`;
 }
 
+function airQualityValues(device) {
+    return `<div class="summary-stacked-values">
+        <div><span>CO₂</span><strong>${v(device.last_co2_ppm, ' ppm')}</strong></div>
+        <div><span>TVOC</span><strong>${v(device.last_tvoc_ppb, ' ppb')}</strong></div>
+        <div><span>Mode / Alarm</span><strong>${escapeHtml(device.last_work_mode || '—')} / ${escapeHtml(device.last_alarm_status || '—')}</strong></div>
+    </div>`;
+}
+
 function radioValues(device) {
     return `<div class="summary-stacked-values radio-values">
         <div><span>RSSI</span><strong>${v(device.last_rssi, ' dBm')}</strong></div>
@@ -380,7 +388,7 @@ function renderDeviceTable(devices) {
             <td class="mono small col-hide-mobile">${lastGps}</td>
             <td>${batteryBadge(d.last_battery)}</td>
             <td class="col-hide-mobile">${environmentValues(d.last_air_temperature, d.last_light)}</td>
-            <td class="col-hide-mobile">${statusValues(d.last_positioning_status, d.last_event_status)}</td>
+            <td class="col-hide-mobile">${statusValues(d.last_positioning_status, d.last_event_status)}${airQualityValues(d)}</td>
             <td class="col-hide-mobile">${radioValues(d)}</td>
             <td class="col-hide-mobile">${loraConfigurationValues(d)}</td>
             <td class="col-hide-mobile">${d.message_count}</td>
@@ -410,6 +418,7 @@ function renderDeviceTable(devices) {
             <div class="device-summary-primary">
                 <div><span>Battery</span><strong>${batteryBadge(d.last_battery)}</strong></div>
                 <div><span>Environment</span>${environmentValues(d.last_air_temperature, d.last_light)}</div>
+                <div><span>Air quality</span>${airQualityValues(d)}</div>
                 <div><span>Status</span>${statusValues(d.last_positioning_status, d.last_event_status)}</div>
                 <div><span>Radio</span>${radioValues(d)}</div>
                 <div><span>LoRa configuration</span>${loraConfigurationValues(d)}</div>

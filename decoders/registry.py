@@ -7,6 +7,7 @@ To add a new decoder:
 from typing import Dict, List, Tuple
 from .dragino_lht65 import DraginoLHT5XDecoder
 from .sensecap_t1000a import SensecapT1000ADecoder
+from .dragino_laq4 import DraginoLAQ4Decoder
 
 dragino_lht5x = DraginoLHT5XDecoder()
 
@@ -14,6 +15,7 @@ DECODERS: Dict = {
     SensecapT1000ADecoder().NAME: SensecapT1000ADecoder(),
     dragino_lht5x.NAME: dragino_lht5x,
     'dragino_lht65': dragino_lht5x,
+    DraginoLAQ4Decoder().NAME: DraginoLAQ4Decoder(),
 }
 
 # List of (key, label) tuples for use in HTML <select> elements

@@ -17,7 +17,10 @@ class TTNBaseDecoder(BaseDecoder):
     def decode(self, raw: dict) -> Optional[dict]:
         result = raw.get('result') if isinstance(raw, dict) else None
         if not isinstance(result, dict):
-            result = raw if isinstance(raw, dict) else None
+            # TTN webhook events commonly wrap ApplicationUp under `data`
+            # (for example `as.up.data.forward`).
+            candidate = raw.get('data') if isinstance(raw, dict) else None
+            result = candidate if isinstance(candidate, dict) and 'end_device_ids' in candidate else raw
         if not result:
             return None
 

@@ -42,6 +42,7 @@ def parse_and_store(data, datasource_id=None, decoder_type=None):
         for field in (
             'device_model', 'f_cnt', 'longitude', 'latitude', 'battery', 'battery_voltage',
             'air_temperature', 'external_temperature', 'humidity', 'light',
+            'co2_ppm', 'tvoc_ppb', 'work_mode', 'alarm_status',
             'rssi', 'channel_rssi', 'snr', 'channel_index',
             'gateway_count', 'gateway_id', 'gateway_eui', 'spreading_factor',
             'bandwidth', 'coding_rate', 'consumed_airtime',
@@ -70,6 +71,10 @@ def parse_and_store(data, datasource_id=None, decoder_type=None):
         air_temperature=fields.get('air_temperature'),
         external_temperature=fields.get('external_temperature'),
         humidity=fields.get('humidity'),
+        co2_ppm=fields.get('co2_ppm'),
+        tvoc_ppb=fields.get('tvoc_ppb'),
+        work_mode=fields.get('work_mode'),
+        alarm_status=fields.get('alarm_status'),
         light=fields.get('light'),
         rssi=fields.get('rssi'),
         channel_rssi=fields.get('channel_rssi'),
