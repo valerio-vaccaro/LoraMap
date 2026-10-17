@@ -15,7 +15,7 @@ async function loadBoxes() {
         }
         const devices = deviceData.devices || [];
         if (!devices.length) {
-            body.innerHTML = '<tr><td colspan="12" class="muted">No board data yet.</td></tr>';
+            body.innerHTML = '<tr><td colspan="13" class="muted">No board data yet.</td></tr>';
         } else {
             body.innerHTML = devices.map(box => `
                 <tr>
@@ -27,6 +27,7 @@ async function loadBoxes() {
                     ${boxCell(box.last_battery_voltage, ' V', 'voltage', 3)}
                     ${boxCell(box.last_air_temperature, ' °C', 'temperature', 1)}
                     ${boxCell(box.last_humidity, '%', 'humidity', 1)}
+                    ${comfortCell(box.last_air_temperature, box.last_humidity)}
                     ${boxCell(box.last_co2_ppm, ' ppm', 'co2', 0)}
                     ${boxCell(box.last_tvoc_ppb, ' ppb', 'tvoc', 0)}
                     <td class="boxes-neutral">${boxEscape(box.last_work_mode || '—')}</td>
@@ -35,7 +36,7 @@ async function loadBoxes() {
         }
         document.getElementById('boxes-updated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
     } catch (error) {
-        body.innerHTML = '<tr><td colspan="12" class="muted">Unable to load board readings.</td></tr>';
+        body.innerHTML = '<tr><td colspan="13" class="muted">Unable to load board readings.</td></tr>';
         document.getElementById('boxes-updated').textContent = '';
     }
 }
@@ -62,6 +63,29 @@ function seenCell(seconds) {
     if (seconds == null) return '<td class="boxes-empty">—</td>';
     const level = seconds > 7200 ? 'bad' : seconds > 1800 ? 'warn' : 'good';
     return `<td class="boxes-seen"><span class="box-reading box-${level}">${boxEscape(boxAge(seconds))}</span></td>`;
+}
+
+function comfortCell(temperature, humidity) {
+    if (temperature == null || humidity == null) return '<td class="boxes-empty">—</td>';
+    const temp = Number(temperature);
+    const hum = Number(humidity);
+    if (!Number.isFinite(temp) || !Number.isFinite(hum)) return '<td class="boxes-empty">—</td>';
+    if (temp <= 0) return comfortBadge('bad', '🧊', 'Freezing', temp, hum);
+    if (temp <= 10) return comfortBadge('bad', '🥶', 'Cold', temp, hum);
+    if (temp >= 35) return comfortBadge('bad', '🥵', 'Extreme heat', temp, hum);
+    if (temp >= 30) return comfortBadge('bad', '🔥', 'Hot', temp, hum);
+    if (hum <= 20) return comfortBadge('bad', '🏜️', 'Very dry', temp, hum);
+    if (hum >= 80) return comfortBadge('bad', '💦', 'Very humid', temp, hum);
+    const comfortable = temp >= 18 && temp <= 26 && hum >= 30 && hum <= 60;
+    const acceptable = temp >= 16 && temp <= 28 && hum >= 20 && hum <= 70;
+    const level = comfortable ? 'good' : acceptable ? 'warn' : 'bad';
+    const icon = comfortable ? '🙂' : acceptable ? '😐' : '😟';
+    const label = comfortable ? 'Comfortable' : acceptable ? 'Fair' : 'Uncomfortable';
+    return comfortBadge(level, icon, label, temp, hum);
+}
+
+function comfortBadge(level, icon, label, temperature, humidity) {
+    return `<td><span class="box-reading box-${level} box-comfort" title="${label}: ${temperature.toFixed(1)} °C, ${humidity.toFixed(1)}% humidity" aria-label="${label}">${icon} ${label}</span></td>`;
 }
 
 function boxAge(seconds) {
