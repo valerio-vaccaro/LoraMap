@@ -26,16 +26,29 @@ from decoders.registry import DECODER_CHOICES
 
 
 def _get_version() -> str:
-    """Return the latest git tag, or 'dev' if none exist."""
+    """Return the tag on HEAD, or its short commit hash when untagged."""
+    repo_dir = Path(__file__).resolve().parent
     try:
         tag = subprocess.check_output(
-            ['git', 'describe', '--tags', '--abbrev=0'],
+            ['git', 'describe', '--tags', '--exact-match', 'HEAD'],
             stderr=subprocess.DEVNULL,
             text=True,
+            cwd=repo_dir,
         ).strip()
-        return tag or 'dev'
+        if tag:
+            return tag
     except Exception:
-        return 'dev'
+        pass
+    try:
+        commit = subprocess.check_output(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            stderr=subprocess.DEVNULL,
+            text=True,
+            cwd=repo_dir,
+        ).strip()
+        return commit or 'unknown'
+    except Exception:
+        return 'unknown'
 
 
 APP_VERSION = _get_version()

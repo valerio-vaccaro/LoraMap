@@ -22,7 +22,7 @@ async function loadBoxes() {
                     <td><strong>${boxEscape(boxNames[box.device_id] || box.device_id)}</strong><span class="boxes-device-id">${boxEscape(box.device_id)}</span></td>
                     <td>${boxEscape(box.device_model || '—')}</td>
                     <td>${boxEscape(box.datasource_name || '—')}</td>
-                    <td class="boxes-seen">${boxEscape(boxAge(box.seconds_ago))}</td>
+                    ${seenCell(box.seconds_ago)}
                     ${boxCell(box.last_battery, '%', 'battery', 0)}
                     ${boxCell(box.last_battery_voltage, ' V', 'voltage', 3)}
                     ${boxCell(box.last_air_temperature, ' °C', 'temperature', 1)}
@@ -56,6 +56,12 @@ function alarmCell(value) {
     if (value == null) return '<td class="boxes-empty">—</td>';
     const active = String(value).toLowerCase() === 'true';
     return `<td><span class="box-reading box-${active ? 'bad' : 'good'}">${active ? 'ALARM' : 'Clear'}</span></td>`;
+}
+
+function seenCell(seconds) {
+    if (seconds == null) return '<td class="boxes-empty">—</td>';
+    const level = seconds > 7200 ? 'bad' : seconds > 1800 ? 'warn' : 'good';
+    return `<td class="boxes-seen"><span class="box-reading box-${level}">${boxEscape(boxAge(seconds))}</span></td>`;
 }
 
 function boxAge(seconds) {
