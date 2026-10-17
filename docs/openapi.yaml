@@ -29,6 +29,21 @@ components:
       schema:
         type: string
       description: Comma-separated list of device IDs.
+    DatasourceIdParam:
+      name: datasource_id
+      in: query
+      required: false
+      schema:
+        type: integer
+      description: Limit results to one of the authenticated user's data sources.
+    GroupByDatasourceParam:
+      name: group_by_datasource
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
+      description: Include separate device summaries for each data source, even when device IDs match.
     FromParam:
       name: from
       in: query
@@ -130,6 +145,8 @@ components:
           - external_temperature
           - humidity
           - light
+          - co2_ppm
+          - tvoc_ppb
           - positioning_status
           - event_status
           - rssi
@@ -149,6 +166,9 @@ components:
       properties:
         id:
           type: integer
+        datasource_id:
+          type: integer
+          nullable: true
         device_id:
           type: string
         received_at:
@@ -177,6 +197,18 @@ components:
           nullable: true
         humidity:
           type: number
+          nullable: true
+        co2_ppm:
+          type: number
+          nullable: true
+        tvoc_ppb:
+          type: number
+          nullable: true
+        work_mode:
+          type: string
+          nullable: true
+        alarm_status:
+          type: string
           nullable: true
         light:
           type: number
@@ -265,6 +297,15 @@ components:
       properties:
         device_id:
           type: string
+        device_model:
+          type: string
+          nullable: true
+        datasource_id:
+          type: integer
+          nullable: true
+        datasource_name:
+          type: string
+          nullable: true
         last_latitude:
           type: number
           nullable: true
@@ -293,6 +334,18 @@ components:
           nullable: true
         last_humidity:
           type: number
+          nullable: true
+        last_co2_ppm:
+          type: number
+          nullable: true
+        last_tvoc_ppb:
+          type: number
+          nullable: true
+        last_work_mode:
+          type: string
+          nullable: true
+        last_alarm_status:
+          type: string
           nullable: true
         last_light:
           type: number
@@ -432,6 +485,12 @@ components:
         humidity:
           type: number
           nullable: true
+        co2_ppm:
+          type: number
+          nullable: true
+        tvoc_ppb:
+          type: number
+          nullable: true
         light:
           type: number
           nullable: true
@@ -543,6 +602,7 @@ paths:
       summary: Get map/tracker positions
       parameters:
         - $ref: '#/components/parameters/DevicesParam'
+        - $ref: '#/components/parameters/DatasourceIdParam'
         - $ref: '#/components/parameters/FromParam'
         - $ref: '#/components/parameters/ToParam'
         - name: last_only
@@ -565,6 +625,8 @@ paths:
       summary: Get per-device summary data for the dashboard
       parameters:
         - $ref: '#/components/parameters/DevicesParam'
+        - $ref: '#/components/parameters/DatasourceIdParam'
+        - $ref: '#/components/parameters/GroupByDatasourceParam'
         - $ref: '#/components/parameters/FromParam'
         - $ref: '#/components/parameters/ToParam'
       responses:
@@ -656,6 +718,7 @@ paths:
           schema:
             type: string
           description: Filter to one device.
+        - $ref: '#/components/parameters/DatasourceIdParam'
         - $ref: '#/components/parameters/MetricParam'
         - $ref: '#/components/parameters/FromParam'
         - $ref: '#/components/parameters/ToParam'

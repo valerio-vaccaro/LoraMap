@@ -7,6 +7,7 @@ Authenticated Flask application for LoRa device tracking, telemetry storage, and
 - Cookie-based user authentication with manual account activation
 - Google Maps position view and tracker view
 - Dashboard with latest per-device status and charts
+- `Recap` table with latest readings, comfort status, and per-board map and sensor history
 - `Sensors` page with filters, charts, and tables for:
   - battery percentage
   - battery voltage
@@ -14,6 +15,8 @@ Authenticated Flask application for LoRa device tracking, telemetry storage, and
   - external temperature
   - humidity
   - luminosity
+  - CO₂
+  - TVOC
 - TTN HTTP Storage API ingestion with deduplication
 - Pluggable decoder system per datasource
 - User-specific device colors and short names
@@ -23,14 +26,16 @@ Authenticated Flask application for LoRa device tracking, telemetry storage, and
 
 - `sensecap_t1000a` → SenseCap T1000-A/B (TTN)
 - `dragino_lht5x` → Dragino LHT52/LHT65 (TTN)
+- `dragino_laq4` → Dragino LAQ4 air quality sensor (TTN)
 
 The shared Dragino LHT52/LHT65 decoder maps:
 
 - `air_temperature` = internal `TempC_SHT`
 - `external_temperature` = `TempC_DS`
 - `humidity` = `Hum_SHT`
-- `battery_voltage` = `BatV`
-- `battery` = `last_battery_percentage.value` when available, otherwise a voltage-based estimate
+- `battery_voltage` = `BatV` (also accepts `Bat_V`)
+
+For LAQ4 payloads, the Dragino decoder also stores `Bat_V` as battery voltage, `CO2_ppm`, `TVOC_ppb`, `Work_mode`, and `Alarm_status`. LAQ4 reports battery voltage rather than a battery percentage.
 
 ## Quick start
 
@@ -119,6 +124,8 @@ The `Sensors` page shows telemetry rows and charts with shared filters:
 - external temperature min/max
 - humidity min/max
 - luminosity min/max
+
+The `Recap` page links each board to its complete GPS history and available sensor charts. Drag across any chart to select a time range; the other charts and map follow that range. Charts are hidden when that sensor has no readings.
 
 ## Access tokens for latest device messages
 
