@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Recap — LoraMap{% endblock %}
+{% block body_class %}dashboard-page{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="boxes-heading">
+        <div>
+            <h2 class="page-title">Recap</h2>
+            <p class="muted">Latest readings from each board. Colors indicate the reading level.</p>
+        </div>
+        <span id="boxes-updated" class="muted small">Loading…</span>
+    </div>
+    <section class="card boxes-card">
+        <div class="table-wrapper boxes-table-wrapper">
+            <table class="data-table boxes-table">
+                <thead><tr>
+                    <th>Board</th><th>Model</th><th>Source</th><th>Last seen</th>
+                    <th>Battery</th><th>Battery voltage</th><th>Temperature</th><th>Humidity</th>
+                    <th>CO₂</th><th>TVOC</th><th>Mode</th><th>Alarm</th>
+                </tr></thead>
+                <tbody id="boxes-table-body"><tr><td colspan="12" class="muted">Loading…</td></tr></tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/boxes.js') }}"></script>
+<script>loadBoxes(); setInterval(loadBoxes, 60000);</script>
+{% endblock %}

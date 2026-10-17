@@ -40,6 +40,10 @@ class DraginoLHT5XDecoder(TTNBaseDecoder):
             'air_temperature': air_temperature,
             'external_temperature': external_temperature,
             'humidity': humidity,
+            'co2_ppm': self._to_float(decoded.get('CO2_ppm')),
+            'tvoc_ppb': self._to_float(decoded.get('TVOC_ppb')),
+            'work_mode': str(decoded['Work_mode']) if decoded.get('Work_mode') is not None else None,
+            'alarm_status': str(decoded['Alarm_status']) if decoded.get('Alarm_status') is not None else None,
             'event_status': json.dumps(extras, separators=(',', ':')) if extras else None,
             'real_timestamp': real_timestamp,
         }
@@ -49,7 +53,7 @@ class DraginoLHT5XDecoder(TTNBaseDecoder):
             millivolts = self._to_float(decoded.get(key))
             if millivolts is not None:
                 return millivolts / 1000.0
-        for key in ('BatV', 'bat_v', 'Bat_v'):
+        for key in ('Bat_V', 'bat_V', 'BatV', 'bat_v', 'Bat_v'):
             volts = self._to_float(decoded.get(key))
             if volts is not None:
                 return volts

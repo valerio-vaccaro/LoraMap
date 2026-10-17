@@ -255,6 +255,12 @@ def sensors_view():
     return render_template('sensors.html', sources=sources)
 
 
+@app.route('/boxes')
+@login_required
+def boxes_view():
+    return render_template('boxes.html')
+
+
 @app.route('/data')
 @login_required
 def data_view():
@@ -628,16 +634,27 @@ def api_devices():
         if dt:
             filters.append(UplinkMessage.real_timestamp <= dt)
 
-    device_rows = db.session.query(UplinkMessage.device_id).filter(
-        *filters
-    ).distinct().all()
+    group_by_datasource = request.args.get('group_by_datasource') == '1'
+    if group_by_datasource:
+        device_rows = db.session.query(
+            UplinkMessage.datasource_id, UplinkMessage.device_id,
+        ).filter(*filters).distinct().all()
+    else:
+        device_rows = db.session.query(UplinkMessage.device_id).filter(*filters).distinct().all()
+    datasource_names = {
+        source.id: source.name
+        for source in DataSource.query.filter(DataSource.id.in_(ds_ids)).all()
+    } if group_by_datasource else {}
     now = datetime.utcnow()
     result = []
-    for (device_id,) in device_rows:
+    for row in device_rows:
+        datasource_id, device_id = row if group_by_datasource else (None, row[0])
         base = UplinkMessage.query.filter(
             *filters,
             UplinkMessage.device_id == device_id,
         )
+        if group_by_datasource:
+            base = base.filter(UplinkMessage.datasource_id == datasource_id)
 
         last_gps = base.filter(
             UplinkMessage.latitude.isnot(None),
@@ -689,6 +706,8 @@ def api_devices():
 
         result.append({
             'device_id': device_id,
+            'datasource_id': datasource_id,
+            'datasource_name': datasource_names.get(datasource_id),
             'last_latitude': last_gps.latitude if last_gps else None,
             'last_longitude': last_gps.longitude if last_gps else None,
             'last_gps_at': last_gps.real_timestamp.isoformat() if last_gps else None,

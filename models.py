@@ -98,7 +98,7 @@ class UplinkMessage(db.Model):
     event_status = db.Column(db.String(255))
 
     __table_args__ = (
-        db.UniqueConstraint('device_id', 'received_at', name='uq_device_received'),
+        db.UniqueConstraint('datasource_id', 'device_id', 'received_at', name='uq_datasource_device_received'),
         db.Index('ix_uplink_messages_datasource_real_timestamp', 'datasource_id', 'real_timestamp'),
         db.Index('ix_uplink_messages_datasource_device_real_timestamp', 'datasource_id', 'device_id', 'real_timestamp'),
     )

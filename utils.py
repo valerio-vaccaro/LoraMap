@@ -34,6 +34,7 @@ def parse_and_store(data, datasource_id=None, decoder_type=None):
 
     real_timestamp = fields.get('real_timestamp') or fields['received_at']
     existing = UplinkMessage.query.filter_by(
+        datasource_id=datasource_id,
         device_id=fields['device_id'],
         received_at=fields['received_at'],
     ).first()
