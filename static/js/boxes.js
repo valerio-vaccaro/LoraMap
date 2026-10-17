@@ -1,5 +1,13 @@
 let boxNames = {};
 
+function boardDetailUrl(board) {
+    const params = new URLSearchParams({
+        device_id: board.device_id,
+        datasource_id: String(board.datasource_id ?? ''),
+    });
+    return `/recap/board?${params.toString()}`;
+}
+
 async function loadBoxes() {
     const body = document.getElementById('boxes-table-body');
     try {
@@ -19,7 +27,7 @@ async function loadBoxes() {
         } else {
             body.innerHTML = devices.map(box => `
                 <tr>
-                    <td><strong>${boxEscape(boxNames[box.device_id] || box.device_id)}</strong><span class="boxes-device-id">${boxEscape(box.device_id)}</span></td>
+                    <td><a class="recap-board-link" href="${boxEscape(boardDetailUrl(box))}"><strong>${boxEscape(boxNames[box.device_id] || box.device_id)}</strong></a><span class="boxes-device-id">${boxEscape(box.device_id)}</span></td>
                     <td>${boxEscape(box.device_model || '—')}</td>
                     <td>${boxEscape(box.datasource_name || '—')}</td>
                     ${seenCell(box.seconds_ago)}

@@ -1630,6 +1630,19 @@ body.tracker-page {
 .boxes-device-id { display: block; color: var(--text-muted); font-size: 0.72rem; margin-top: 0.2rem; }
 .boxes-seen, .boxes-neutral { white-space: nowrap; }
 .boxes-empty { color: var(--text-muted); text-align: center; }
+.recap-board-link { color: var(--text); }
+.recap-board-link:hover { color: var(--primary); }
+.board-recap-back { display: inline-block; margin-bottom: 0.75rem; }
+.board-recap-page .boxes-heading { margin-bottom: 1rem; }
+.board-map-card { margin-bottom: 1rem; }
+.board-recap-map { width: 100%; height: min(62vh, 560px); min-height: 320px; border-radius: 6px; overflow: hidden; background: var(--surface-2); }
+.board-map-message { padding-top: 0.6rem; }
+.board-chart-controls { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0.5rem 0 0.75rem; }
+.board-recap-charts .card { min-width: 0; }
+
+@media (max-width: 600px) {
+    .board-chart-controls { align-items: flex-start; flex-direction: column; }
+}
 .box-reading {
     display: inline-block;
     padding: 0.28rem 0.5rem;

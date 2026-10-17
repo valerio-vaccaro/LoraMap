@@ -268,6 +268,15 @@ def sensors_view():
     return render_template('sensors.html', sources=sources)
 
 
+@app.route('/recap/board')
+@login_required
+def board_recap():
+    return render_template(
+        'board_recap.html',
+        google_maps_key=app.config.get('GOOGLE_MAPS_API_KEY', ''),
+    )
+
+
 @app.route('/boxes')
 @login_required
 def boxes_view():
@@ -552,6 +561,10 @@ def api_positions():
         UplinkMessage.longitude.isnot(None),
     )
 
+    datasource_id = str(request.args.get('datasource_id', '')).strip()
+    if datasource_id.isdigit() and int(datasource_id) in ds_ids:
+        query = query.filter(UplinkMessage.datasource_id == int(datasource_id))
+
     if devices_param:
         device_list = [d.strip() for d in devices_param.split(',') if d.strip()]
         if device_list:
@@ -634,6 +647,9 @@ def api_devices():
     to_time = request.args.get('to', '')
 
     filters = [UplinkMessage.datasource_id.in_(ds_ids)]
+    datasource_filter = str(request.args.get('datasource_id', '')).strip()
+    if datasource_filter.isdigit() and int(datasource_filter) in ds_ids:
+        filters.append(UplinkMessage.datasource_id == int(datasource_filter))
     if devices_param:
         device_list = [d.strip() for d in devices_param.split(',') if d.strip()]
         if device_list:

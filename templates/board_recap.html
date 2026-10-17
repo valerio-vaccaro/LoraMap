@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Board Recap — LoraMap{% endblock %}
+{% block body_class %}dashboard-page{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container board-recap-page">
+    <a class="btn btn-ghost btn-sm board-recap-back" href="{{ url_for('boxes_view') }}">← Back to Recap</a>
+    <div class="boxes-heading">
+        <div><h2 id="board-recap-title" class="page-title">Board recap</h2><p id="board-recap-subtitle" class="muted">Loading board…</p></div>
+    </div>
+    <section class="card board-map-card">
+        <div class="card-header"><h3 class="card-title">Recorded positions</h3><span id="board-map-count" class="muted small"></span></div>
+        <div id="board-recap-map" class="board-recap-map"></div>
+        <p id="board-map-message" class="muted board-map-message"></p>
+    </section>
+    <div class="board-chart-controls">
+        <span class="muted small">Drag across any chart to select a time range. The other charts and map will follow.</span>
+        <button id="reset-board-range" class="btn btn-ghost btn-sm" type="button" onclick="resetBoardTimeRange()" hidden>Reset range</button>
+    </div>
+    <div id="board-recap-charts" class="charts-grid board-recap-charts"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/board_recap.js') }}"></script>
+<script>loadBoardRecap();</script>
+{% if google_maps_key %}
+<script async src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_key }}&callback=initBoardRecapMap&v=weekly"></script>
+{% endif %}
+{% endblock %}
